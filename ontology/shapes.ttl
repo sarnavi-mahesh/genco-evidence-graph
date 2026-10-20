@@ -1,0 +1,882 @@
+@prefix genco: <https://genco.example/ontology#> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+genco:GridModelShape a sh:NodeShape ;
+    sh:targetClass genco:GridModel ;
+    sh:property [
+        sh:path genco:gridName ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string
+    ] .
+
+genco:DataGenerationRunShape a sh:NodeShape ;
+    sh:targetClass genco:DataGenerationRun ;
+    sh:property [
+        sh:path prov:used ;
+        sh:qualifiedValueShape [ sh:class genco:GridModel ] ;
+        sh:qualifiedMinCount 1 ;
+        sh:qualifiedMaxCount 1
+    ] ;
+    sh:property [
+        sh:path genco:generationMethod ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string
+    ] ;
+    sh:property [
+        sh:path genco:generationSeedStatus ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string
+    ] ;
+    sh:property [
+        sh:path genco:softwareVersion ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string
+    ] ;
+    sh:property [
+        sh:path genco:configHash ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:pattern "^[0-9a-f]{64}$"
+    ] ;
+    sh:property [
+        sh:path genco:perturbation ;
+        sh:minCount 1 ;
+        sh:datatype xsd:string
+    ] ;
+    sh:property [
+        sh:path genco:provenanceLimitation ;
+        sh:minCount 1 ;
+        sh:datatype xsd:string
+    ] .
+
+genco:DatasetShape a sh:NodeShape ;
+    sh:targetClass genco:Dataset ;
+    sh:property [
+        sh:path genco:datasetId ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string
+    ] ;
+    sh:property [
+        sh:path genco:task ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string
+    ] ;
+    sh:property [
+        sh:path genco:corpusScenarioCount ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1
+    ] ;
+    sh:property [
+        sh:path genco:datasetSplit ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:in ( "train" "test" )
+    ] ;
+    sh:property [
+        sh:path genco:splitScenarioCount ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1
+    ] ;
+    sh:property [
+        sh:path genco:datasetRevision ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:pattern "^[0-9a-f]{40}$"
+    ] ;
+    sh:property [
+        sh:path prov:wasGeneratedBy ;
+        sh:qualifiedValueShape [ sh:class genco:DataGenerationRun ] ;
+        sh:qualifiedMinCount 1 ;
+        sh:qualifiedMaxCount 1
+    ] ;
+    sh:property [
+        sh:path prov:wasDerivedFrom ;
+        sh:qualifiedValueShape [ sh:class genco:GridModel ] ;
+        sh:qualifiedMinCount 1 ;
+        sh:qualifiedMaxCount 1
+    ] .
+
+genco:TrainingRunShape a sh:NodeShape ;
+    sh:targetClass genco:TrainingRun ;
+    sh:property [
+        sh:path prov:used ;
+        sh:qualifiedValueShape [
+            sh:class genco:Dataset ;
+            sh:property [ sh:path genco:datasetSplit ; sh:hasValue "train" ]
+        ] ;
+        sh:qualifiedMinCount 1 ;
+        sh:qualifiedMaxCount 1
+    ] ;
+    sh:property [
+        sh:path genco:mlflowRunId ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string
+    ] ;
+    sh:property [
+        sh:path genco:startTimeMs ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer
+    ] ;
+    sh:property [
+        sh:path genco:endTimeMs ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer
+    ] ;
+    sh:property [
+        sh:path genco:randomSeed ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer
+    ] ;
+    sh:property [
+        sh:path genco:parametersHash ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:pattern "^[0-9a-f]{64}$"
+    ] ;
+    sh:property [
+        sh:path genco:metricsHash ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:pattern "^[0-9a-f]{64}$"
+    ] .
+
+
+genco:TrainingRunValuesShape a sh:NodeShape ;
+    sh:targetClass genco:TrainingRun ;
+    sh:property [
+        sh:path genco:trainingEpochs ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1
+    ] ;
+    sh:property [
+        sh:path genco:trainingBatchSize ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1
+    ] ;
+    sh:property [
+        sh:path genco:trainingLearningRate ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:double ;
+        sh:minExclusive 0
+    ] ;
+    sh:property [
+        sh:path genco:trainingOptimizer ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string
+    ] ;
+    sh:property [
+        sh:path genco:trainingSoftwareRevisionStatus ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string
+    ] ;
+    sh:property [
+        sh:path genco:trainingLoss ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:double
+    ] ;
+    sh:property [
+        sh:path genco:validationLoss ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:double
+    ] ;
+    sh:property [
+        sh:path genco:validationBusMseLoss ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:double
+    ] ;
+    sh:property [
+        sh:path genco:validationGeneratorMseLoss ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:double
+    ] ;
+    sh:property [
+        sh:path genco:validationPhysicsLoss ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:double
+    ] ;
+    sh:property [
+        sh:path genco:validationQgViolationPenaltyLoss ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:double
+    ] .
+
+genco:ModelCheckpointShape a sh:NodeShape ;
+    sh:targetClass genco:ModelCheckpoint ;
+    sh:property [
+        sh:path genco:hasAssociatedTrainingEvidence ;
+        sh:class genco:TrainingEvidenceAssociation ;
+        sh:maxCount 1
+    ] ;
+    sh:property [
+        sh:path genco:authoritativeTrainingAttestation ;
+        sh:class genco:AuthoritativeTrainingAttestation ;
+        sh:maxCount 1
+    ] ;
+    sh:property [
+        sh:path genco:checkpointId ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string
+    ] ;
+    sh:property [
+        sh:path genco:checkpointHash ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:pattern "^[0-9a-f]{64}$"
+    ] ;
+    sh:property [
+        sh:path genco:checkpointBindingStatus ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string
+    ] ;
+    sh:sparql [
+        sh:message "A checkpoint needs unverified associated training evidence or an authoritative training attestation." ;
+        sh:select """
+            PREFIX genco: <https://genco.example/ontology#>
+            PREFIX prov: <http://www.w3.org/ns/prov#>
+            SELECT $this WHERE {
+              FILTER NOT EXISTS { $this genco:hasAssociatedTrainingEvidence ?association }
+              FILTER NOT EXISTS {
+                $this prov:wasGeneratedBy ?training ;
+                      genco:authoritativeTrainingAttestation ?attestation .
+                ?training a genco:TrainingRun .
+                ?attestation genco:attestsCheckpoint $this ;
+                             genco:attestsTrainingRun ?training ;
+                             genco:attestationVerificationStatus "verified" .
+              }
+            }
+        """
+    ] ;
+    sh:sparql [
+        sh:message "Checkpoint generation by a training run requires explicit authoritative attestation." ;
+        sh:select """
+            PREFIX genco: <https://genco.example/ontology#>
+            PREFIX prov: <http://www.w3.org/ns/prov#>
+            SELECT $this WHERE {
+              $this prov:wasGeneratedBy ?training .
+              ?training a genco:TrainingRun .
+              FILTER NOT EXISTS {
+                $this genco:authoritativeTrainingAttestation ?attestation .
+                ?attestation genco:attestsCheckpoint $this ;
+                             genco:attestsTrainingRun ?training ;
+                             genco:attestationVerificationStatus "verified" .
+              }
+            }
+        """
+    ] ;
+    sh:sparql [
+        sh:message "Unverified associated evidence cannot also have a direct checkpoint-to-training PROV relation." ;
+        sh:select """
+            PREFIX genco: <https://genco.example/ontology#>
+            PREFIX prov: <http://www.w3.org/ns/prov#>
+            SELECT $this WHERE {
+              $this genco:hasAssociatedTrainingEvidence ?association ;
+                    ?predicate ?training .
+              ?association genco:associatedTrainingRun ?training .
+              FILTER(STRSTARTS(STR(?predicate), STR(prov:)))
+            }
+        """
+    ] ;
+    sh:sparql [
+        sh:message "Unverified associated evidence cannot also have a qualified checkpoint-to-training PROV relation." ;
+        sh:select """
+            PREFIX genco: <https://genco.example/ontology#>
+            PREFIX prov: <http://www.w3.org/ns/prov#>
+            SELECT $this WHERE {
+              $this genco:hasAssociatedTrainingEvidence ?association ;
+                    ?qualifiedPredicate ?qualification .
+              ?association genco:associatedTrainingRun ?training .
+              ?qualification ?role ?training .
+              FILTER(STRSTARTS(STR(?qualifiedPredicate), CONCAT(STR(prov:), "qualified")))
+              FILTER(STRSTARTS(STR(?role), STR(prov:)))
+            }
+        """
+    ] ;
+    sh:sparql [
+        sh:message "Unverified associated evidence cannot also have an inverse training-to-checkpoint PROV relation." ;
+        sh:select """
+            PREFIX genco: <https://genco.example/ontology#>
+            PREFIX prov: <http://www.w3.org/ns/prov#>
+            SELECT $this WHERE {
+              $this genco:hasAssociatedTrainingEvidence ?association .
+              ?association genco:associatedTrainingRun ?training .
+              ?training ?predicate $this .
+              FILTER(STRSTARTS(STR(?predicate), STR(prov:)))
+            }
+        """
+    ] ;
+    sh:sparql [
+        sh:message "Unverified associated evidence cannot have a direct or multi-hop causal PROV path to its training run." ;
+        sh:select """
+            PREFIX genco: <https://genco.example/ontology#>
+            PREFIX prov: <http://www.w3.org/ns/prov#>
+            SELECT $this WHERE {
+              $this genco:hasAssociatedTrainingEvidence ?association .
+              ?association genco:associatedTrainingRun ?training .
+              $this (
+                prov:wasGeneratedBy |
+                ^prov:generated |
+                prov:wasDerivedFrom |
+                prov:wasInfluencedBy |
+                ^prov:influenced |
+                prov:wasRevisionOf |
+                prov:wasQuotedFrom |
+                prov:hadPrimarySource |
+                prov:wasInvalidatedBy |
+                ^prov:invalidated |
+                prov:qualifiedGeneration |
+                prov:qualifiedDerivation |
+                prov:qualifiedInfluence |
+                prov:qualifiedRevision |
+                prov:qualifiedQuotation |
+                prov:qualifiedPrimarySource |
+                prov:qualifiedInvalidation |
+                prov:entity |
+                prov:activity |
+                prov:influencer
+              )+ ?training .
+            }
+        """
+    ] .
+
+genco:AuthoritativeTrainingAttestationShape a sh:NodeShape ;
+    sh:targetClass genco:AuthoritativeTrainingAttestation ;
+    sh:property [
+        sh:path genco:attestationId ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string
+    ] ;
+    sh:property [
+        sh:path genco:attestationIssuer ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string
+    ] ;
+    sh:property [
+        sh:path genco:attestationSource ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:pattern "^https://"
+    ] ;
+    sh:property [
+        sh:path genco:attestsCheckpoint ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:class genco:ModelCheckpoint
+    ] ;
+    sh:property [
+        sh:path genco:attestsTrainingRun ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:class genco:TrainingRun
+    ] ;
+    sh:property [
+        sh:path genco:attestedCheckpointHash ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:pattern "^[0-9a-f]{64}$"
+    ] ;
+    sh:property [
+        sh:path genco:attestedTrainingRunId ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string
+    ] ;
+    sh:property [
+        sh:path genco:attestationContentHash ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:pattern "^[0-9a-f]{64}$"
+    ] ;
+    sh:property [
+        sh:path genco:attestationSignature ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string
+    ] ;
+    sh:property [
+        sh:path genco:attestationVerificationStatus ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:hasValue "verified"
+    ] ;
+    sh:sparql [
+        sh:message "Authoritative attestation checkpoint and training bindings disagree." ;
+        sh:select """
+            PREFIX genco: <https://genco.example/ontology#>
+            SELECT $this WHERE {
+              $this genco:attestsCheckpoint ?checkpoint ;
+                    genco:attestsTrainingRun ?training ;
+                    genco:attestedCheckpointHash ?checkpointHash ;
+                    genco:attestedTrainingRunId ?trainingRunId .
+              {
+                FILTER NOT EXISTS { ?checkpoint genco:checkpointHash ?checkpointHash }
+              }
+              UNION
+              {
+                FILTER NOT EXISTS { ?training genco:trainingRunId ?trainingRunId }
+              }
+            }
+        """
+    ] .
+
+genco:TrainingEvidenceAssociationShape a sh:NodeShape ;
+    sh:targetClass genco:TrainingEvidenceAssociation ;
+    sh:property [
+        sh:path genco:associatedTrainingRun ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:class genco:TrainingRun
+    ] ;
+    sh:property [
+        sh:path genco:associationStatus ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:hasValue "co-published-compatible-unverified-production"
+    ] ;
+    sh:property [
+        sh:path genco:productionIdentityVerified ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:boolean ;
+        sh:hasValue false
+    ] ;
+    sh:property [
+        sh:path genco:configurationCompatible ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:boolean ;
+        sh:hasValue true
+    ] ;
+    sh:property [
+        sh:path genco:evidenceBasis ;
+        sh:minCount 1 ;
+        sh:datatype xsd:string
+    ] ;
+    sh:property [
+        sh:path genco:provenanceLimitation ;
+        sh:minCount 1 ;
+        sh:datatype xsd:string
+    ] ;
+    sh:sparql [
+        sh:message "Associated training evidence cannot target inference, test, or non-training activity." ;
+        sh:select """
+            PREFIX genco: <https://genco.example/ontology#>
+            PREFIX prov: <http://www.w3.org/ns/prov#>
+            SELECT $this WHERE {
+              $this genco:associatedTrainingRun ?run .
+              {
+                ?run a genco:InferenceRun .
+              } UNION {
+                ?run prov:used ?dataset .
+                ?dataset genco:datasetSplit ?split .
+                FILTER (?split != "train")
+              } UNION {
+                FILTER NOT EXISTS { ?run a genco:TrainingRun }
+              }
+            }
+        """
+    ] .
+
+genco:ScenarioShape a sh:NodeShape ;
+    sh:targetClass genco:Scenario ;
+    sh:property [
+        sh:path genco:scenarioId ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string
+    ] .
+
+genco:InferenceRunShape a sh:NodeShape ;
+    sh:targetClass genco:InferenceRun ;
+    sh:property [
+        sh:path prov:used ;
+        sh:qualifiedValueShape [
+            sh:class genco:Dataset ;
+            sh:property [ sh:path genco:datasetSplit ; sh:hasValue "test" ]
+        ] ;
+        sh:qualifiedMinCount 1 ;
+        sh:qualifiedMaxCount 1
+    ] ;
+    sh:property [
+        sh:path prov:used ;
+        sh:qualifiedValueShape [ sh:class genco:ModelCheckpoint ] ;
+        sh:qualifiedMinCount 1 ;
+        sh:qualifiedMaxCount 1
+    ] ;
+    sh:property [
+        sh:path prov:used ;
+        sh:qualifiedValueShape [ sh:class genco:Scenario ] ;
+        sh:qualifiedMinCount 1 ;
+        sh:qualifiedMaxCount 1
+    ] ;
+    sh:property [
+        sh:path genco:startTimeMs ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer
+    ] ;
+    sh:property [
+        sh:path genco:endTimeMs ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer
+    ] ;
+    sh:property [
+        sh:path genco:graphkitCommit ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:pattern "^[0-9a-f]{40}$"
+    ] .
+
+genco:ReferenceExtractionRunShape a sh:NodeShape ;
+    sh:targetClass genco:ReferenceExtractionRun ;
+    sh:property [
+        sh:path prov:used ;
+        sh:qualifiedValueShape [ sh:class genco:ModelCheckpoint ] ;
+        sh:qualifiedMinCount 1 ;
+        sh:qualifiedMaxCount 1
+    ] ;
+    sh:property [
+        sh:path prov:used ;
+        sh:qualifiedValueShape [
+            sh:class genco:Dataset ;
+            sh:property [ sh:path genco:datasetSplit ; sh:hasValue "train" ]
+        ] ;
+        sh:qualifiedMinCount 1 ;
+        sh:qualifiedMaxCount 1
+    ] ;
+    sh:property [
+        sh:path genco:mlflowRunId ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string
+    ] ;
+    sh:property [
+        sh:path genco:startTimeMs ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer
+    ] ;
+    sh:property [
+        sh:path genco:endTimeMs ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer
+    ] ;
+    sh:property [
+        sh:path genco:graphkitCommit ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:pattern "^[0-9a-f]{40}$"
+    ] .
+
+genco:ReproductionRunShape a sh:NodeShape ;
+    sh:targetClass genco:ReproductionRun ;
+    sh:property [
+        sh:path prov:used ;
+        sh:qualifiedValueShape [ sh:class genco:ModelCheckpoint ] ;
+        sh:qualifiedMinCount 1 ;
+        sh:qualifiedMaxCount 1
+    ] ;
+    sh:property [
+        sh:path prov:used ;
+        sh:qualifiedValueShape [
+            sh:class genco:Dataset ;
+            sh:property [ sh:path genco:datasetSplit ; sh:hasValue "test" ]
+        ] ;
+        sh:qualifiedMinCount 1 ;
+        sh:qualifiedMaxCount 1
+    ] ;
+    sh:property [
+        sh:path genco:reproducesRun ;
+        sh:qualifiedValueShape [ sh:class genco:InferenceRun ] ;
+        sh:qualifiedMinCount 1 ;
+        sh:qualifiedMaxCount 1
+    ] ;
+    sh:property [
+        sh:path genco:mlflowRunId ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string
+    ] ;
+    sh:property [
+        sh:path genco:startTimeMs ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer
+    ] ;
+    sh:property [
+        sh:path genco:endTimeMs ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer
+    ] ;
+    sh:property [
+        sh:path genco:graphkitCommit ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:pattern "^[0-9a-f]{40}$"
+    ] ;
+    sh:property [
+        sh:path genco:environmentHash ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:pattern "^[0-9a-f]{64}$"
+    ] ;
+    sh:property [
+        sh:path genco:pythonVersion ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string
+    ] ;
+    sh:property [
+        sh:path genco:runtimePlatform ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string
+    ] ;
+    sh:property [
+        sh:path genco:torchVersion ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string
+    ] ;
+    sh:property [
+        sh:path genco:torchvisionVersion ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string
+    ] ;
+    sh:property [
+        sh:path genco:torchaudioVersion ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string
+    ] ;
+    sh:property [
+        sh:path genco:torchScatterVersion ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string
+    ] ;
+    sh:property [
+        sh:path genco:comparisonStatus ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:hasValue "passed"
+    ] ;
+    sh:property [
+        sh:path genco:tolerancePolicyId ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:hasValue "genco-case14-baseline-equivalence-v1"
+    ] ;
+    sh:property [
+        sh:path genco:tolerancePolicyHash ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:hasValue "5020e627198d6209bdde3b8a0c5f2dbfde26a1a589070359eb6c85d8787e1a56"
+    ] ;
+    sh:property [
+        sh:path genco:maximumVoltageDifference ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:double ;
+        sh:minInclusive 0
+    ] ;
+    sh:property [
+        sh:path genco:maximumPowerDifference ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:double ;
+        sh:minInclusive 0
+    ] .
+
+genco:PredictionShape a sh:NodeShape ;
+    sh:targetClass genco:Prediction ;
+    sh:property [
+        sh:path genco:predictionId ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string
+    ] ;
+    sh:property [
+        sh:path prov:wasGeneratedBy ;
+        sh:qualifiedValueShape [ sh:class genco:InferenceRun ] ;
+        sh:qualifiedMinCount 1 ;
+        sh:qualifiedMaxCount 1
+    ] ;
+    sh:property [
+        sh:path genco:hasPhysicalEvidence ;
+        sh:qualifiedValueShape [ sh:class genco:PhysicalEvidence ] ;
+        sh:qualifiedMinCount 1 ;
+        sh:qualifiedMaxCount 1
+    ] ;
+    sh:property [
+        sh:path genco:hasReferenceCase ;
+        sh:qualifiedValueShape [ sh:class genco:ReferenceCase ] ;
+        sh:qualifiedMinCount 1
+    ] .
+
+genco:ReferenceCaseShape a sh:NodeShape ;
+    sh:targetClass genco:ReferenceCase ;
+    sh:property [
+        sh:path genco:scenarioId ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string
+    ] ;
+    sh:property [
+        sh:path genco:distance ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:double ;
+        sh:minInclusive 0
+    ] ;
+    sh:property [
+        sh:path genco:rank ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1
+    ] .
+
+genco:PhysicalEvidenceShape a sh:NodeShape ;
+    sh:targetClass genco:PhysicalEvidence ;
+    sh:property [
+        sh:path genco:meanResidual ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:double ;
+        sh:minInclusive 0
+    ] ;
+    sh:property [
+        sh:path genco:maxResidual ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:double ;
+        sh:minInclusive 0
+    ] ;
+    sh:property [
+        sh:path genco:activeResidual ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:double ;
+        sh:minInclusive 0
+    ] ;
+    sh:property [
+        sh:path genco:reactiveResidual ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:double ;
+        sh:minInclusive 0
+    ] ;
+    sh:property [
+        sh:path genco:violationCount ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 0
+    ] ;
+    sh:property [
+        sh:path genco:max_pbe_bus ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 0
+    ] ;
+    sh:property [
+        sh:path genco:hasMetricSemantics ;
+        sh:qualifiedValueShape [ sh:class genco:MetricSemantics ] ;
+        sh:qualifiedMinCount 8
+    ] .
+
+genco:MetricSemanticsShape a sh:NodeShape ;
+    sh:targetClass genco:MetricSemantics ;
+    sh:property [
+        sh:path genco:metricName ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string
+    ] ;
+    sh:property [
+        sh:path genco:unit ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string
+    ] ;
+    sh:property [
+        sh:path genco:treatment ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string
+    ] ;
+    sh:property [
+        sh:path genco:aggregation ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string
+    ] ;
+    sh:property [
+        sh:path genco:population ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string
+    ] ;
+    sh:property [
+        sh:path genco:comparisonTolerance ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string
+    ] .
+
+genco:ArtifactShape a sh:NodeShape ;
+    sh:targetClass genco:Artifact ;
+    sh:property [
+        sh:path genco:artifactPath ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string
+    ] ;
+    sh:property [
+        sh:path genco:sha256 ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:pattern "^[0-9a-f]{64}$"
+    ] .

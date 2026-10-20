@@ -1,0 +1,65 @@
+# Markdown: keep only the root project readme visible to Git
+*.md
+!/readme.md
+
+# macOS and IDEs
+.DS_Store
+.idea/
+.vscode/
+.github/
+*.swp
+*~
+
+# Python environments
+.venv/
+venv/
+env/
+ENV/
+
+# Python caches and compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+.python-version
+
+# Packaging and build outputs
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Tests, coverage, and type/lint caches
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Generated data, models, and experiment outputs
+data/generated/
+artifacts/
+outputs/
+mlruns/
+checkpoints/
+*.ckpt
+*.pt
+*.pth
+
+# Logs and temporary files
+*.log
+*.tmp
+tmp/
+temp/

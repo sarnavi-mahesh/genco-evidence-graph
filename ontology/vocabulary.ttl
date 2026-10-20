@@ -1,0 +1,74 @@
+@prefix genco: <https://genco.example/ontology#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+genco:TrainingEvidenceAssociation a owl:Class ;
+    rdfs:comment "Non-causal, authenticated evidence associated with a checkpoint publication." .
+
+genco:hasAssociatedTrainingEvidence a owl:ObjectProperty ;
+    rdfs:domain genco:ModelCheckpoint ;
+    rdfs:range genco:TrainingEvidenceAssociation .
+
+genco:associatedTrainingRun a owl:ObjectProperty ;
+    rdfs:domain genco:TrainingEvidenceAssociation ;
+    rdfs:range genco:TrainingRun .
+
+genco:associationStatus a owl:DatatypeProperty ;
+    rdfs:domain genco:TrainingEvidenceAssociation ;
+    rdfs:range xsd:string .
+
+genco:evidenceBasis a owl:DatatypeProperty ;
+    rdfs:domain genco:TrainingEvidenceAssociation ;
+    rdfs:range xsd:string .
+
+genco:productionIdentityVerified a owl:DatatypeProperty ;
+    rdfs:domain genco:TrainingEvidenceAssociation ;
+    rdfs:range xsd:boolean .
+
+genco:configurationCompatible a owl:DatatypeProperty ;
+    rdfs:domain genco:TrainingEvidenceAssociation ;
+    rdfs:range xsd:boolean .
+
+genco:provenanceLimitation a owl:DatatypeProperty ;
+    rdfs:range xsd:string .
+
+genco:AuthoritativeTrainingAttestation a owl:Class ;
+    rdfs:comment "Cryptographically verified evidence binding a checkpoint to its training run." .
+
+genco:authoritativeTrainingAttestation a owl:ObjectProperty ;
+    rdfs:domain genco:ModelCheckpoint ;
+    rdfs:range genco:AuthoritativeTrainingAttestation .
+
+genco:attestsCheckpoint a owl:ObjectProperty ;
+    rdfs:domain genco:AuthoritativeTrainingAttestation ;
+    rdfs:range genco:ModelCheckpoint .
+
+genco:attestsTrainingRun a owl:ObjectProperty ;
+    rdfs:domain genco:AuthoritativeTrainingAttestation ;
+    rdfs:range genco:TrainingRun .
+
+genco:attestationId a owl:DatatypeProperty .
+genco:attestationIssuer a owl:DatatypeProperty .
+genco:attestationSource a owl:DatatypeProperty .
+genco:attestedCheckpointHash a owl:DatatypeProperty .
+genco:attestedTrainingRunId a owl:DatatypeProperty .
+genco:attestationContentHash a owl:DatatypeProperty .
+genco:attestationSignature a owl:DatatypeProperty .
+genco:attestationVerificationStatus a owl:DatatypeProperty .
+genco:trainingRunId a owl:DatatypeProperty ;
+    rdfs:domain genco:TrainingRun ;
+    rdfs:range xsd:string .
+
+genco:checkpointRepositoryPath a owl:DatatypeProperty ;
+    rdfs:domain genco:ModelCheckpoint ;
+    rdfs:range xsd:string .
+
+genco:tolerancePolicyId a owl:DatatypeProperty ;
+    rdfs:domain genco:ReproductionRun ;
+    rdfs:range xsd:string .
+
+genco:tolerancePolicyHash a owl:DatatypeProperty ;
+    rdfs:domain genco:ReproductionRun ;
+    rdfs:range xsd:string .

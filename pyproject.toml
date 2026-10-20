@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "genco-evidence-graph"
+version = "0.1.0"
+description = "Local RDF/PROV-O evidence layer for GENCO predictions."
+requires-python = ">=3.10,<3.13"
+dependencies = [
+  "cryptography>=46",
+  "numpy>=1.24",
+  "pandas>=2.0",
+  "pyarrow>=12",
+  "pyshacl>=0.25",
+  "PyYAML>=6",
+  "rdflib>=7.0",
+  "torch>=2.0",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8"]
+shacl = ["pyshacl>=0.25"]
+
+[project.scripts]
+genco-evidence = "genco_evidence_graph.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["genco_evidence_graph*"]

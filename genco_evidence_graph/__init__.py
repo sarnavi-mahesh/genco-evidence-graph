@@ -1,0 +1,76 @@
+"""GENCO Evidence Graph public package."""
+
+from .attestation import (
+    VerifiedTrainingAttestation,
+    canonical_attestation_payload,
+    verify_training_attestation,
+)
+from .contracts import (
+    DatasetProvenance,
+    EmbeddingBatch,
+    MetricSemantics,
+    ModelProvenance,
+    PhysicalEvidence,
+    PredictionEvidence,
+    TrainingEvidenceAssociation,
+)
+from .embeddings import ReferenceIndex, pool_scenario_embeddings
+from .baseline import (
+    BaselineComparisonResult,
+    BaselineInferenceResult,
+    BaselineInferenceSpec,
+    KeyedBaselineComparisonResult,
+    VerifiedRunManifest,
+    compare_baseline_residuals,
+    compare_keyed_baseline,
+    prepare_reference_prediction_splits,
+    run_baseline_inference,
+    verify_manifest_artifacts,
+    verify_run_manifest,
+    verify_reproduction_manifest,
+)
+from .provenance import sha256_file, sha256_path, stable_uri
+from .api import (
+    EvidenceBuildSpec,
+    QueryResult,
+    build_evidence,
+    query_evidence,
+    validate_evidence,
+)
+from .rdf import build_evidence_graph
+
+__all__ = [
+    "VerifiedTrainingAttestation",
+    "canonical_attestation_payload",
+    "verify_training_attestation",
+    "DatasetProvenance",
+    "EmbeddingBatch",
+    "MetricSemantics",
+    "ModelProvenance",
+    "PhysicalEvidence",
+    "PredictionEvidence",
+    "TrainingEvidenceAssociation",
+    "ReferenceIndex",
+    "BaselineInferenceResult",
+    "BaselineComparisonResult",
+    "BaselineInferenceSpec",
+    "KeyedBaselineComparisonResult",
+    "VerifiedRunManifest",
+    "EvidenceBuildSpec",
+    "QueryResult",
+    "build_evidence",
+    "build_evidence_graph",
+    "query_evidence",
+    "validate_evidence",
+    "pool_scenario_embeddings",
+    "compare_baseline_residuals",
+    "compare_keyed_baseline",
+    "prepare_reference_prediction_splits",
+    "run_baseline_inference",
+    "verify_run_manifest",
+    "verify_reproduction_manifest",
+    "verify_manifest_artifacts",
+    "sha256_file",
+    "sha256_path",
+    "stable_uri",
+]

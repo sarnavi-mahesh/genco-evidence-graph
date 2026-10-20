@@ -1,0 +1,93 @@
+@prefix genco: <https://genco.example/ontology#> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+genco:GridModel a rdfs:Class .
+genco:Dataset a rdfs:Class ; rdfs:subClassOf prov:Entity .
+genco:DataGenerationRun a rdfs:Class ; rdfs:subClassOf prov:Activity .
+genco:TrainingRun a rdfs:Class ; rdfs:subClassOf prov:Activity .
+genco:ModelCheckpoint a rdfs:Class ; rdfs:subClassOf prov:Entity .
+genco:InferenceRun a rdfs:Class ; rdfs:subClassOf prov:Activity .
+genco:ReferenceExtractionRun a rdfs:Class ; rdfs:subClassOf prov:Activity .
+genco:ReproductionRun a rdfs:Class ; rdfs:subClassOf prov:Activity .
+genco:Scenario a rdfs:Class ; rdfs:subClassOf prov:Entity .
+genco:Prediction a rdfs:Class ; rdfs:subClassOf prov:Entity .
+genco:ReferenceCase a rdfs:Class ; rdfs:subClassOf prov:Entity .
+genco:PhysicalEvidence a rdfs:Class ; rdfs:subClassOf prov:Entity .
+genco:MetricSemantics a rdfs:Class .
+genco:Artifact a rdfs:Class ; rdfs:subClassOf prov:Entity .
+genco:PredictionArtifact a rdfs:Class ; rdfs:subClassOf genco:Artifact .
+genco:EmbeddingArtifact a rdfs:Class ; rdfs:subClassOf genco:Artifact .
+genco:ReferenceEmbeddingArtifact a rdfs:Class ; rdfs:subClassOf genco:EmbeddingArtifact .
+genco:ProvenanceArtifact a rdfs:Class ; rdfs:subClassOf genco:Artifact .
+genco:sha256 a rdfs:Property .
+genco:hasProvenanceArtifact a rdfs:Property .
+genco:hasEmbeddingArtifact a rdfs:Property .
+genco:datasetRevision a rdfs:Property .
+genco:corpusScenarioCount a rdfs:Property .
+genco:datasetSplit a rdfs:Property .
+genco:splitScenarioCount a rdfs:Property .
+genco:normalizerHash a rdfs:Property .
+genco:configHash a rdfs:Property .
+genco:graphkitCommit a rdfs:Property .
+genco:mlflowRunId a rdfs:Property .
+genco:available_violation_types a rdfs:Property .
+genco:available_residual_types a rdfs:Property .
+genco:max_pbe_bus a rdfs:Property .
+genco:hasMetricSemantics a rdfs:Property .
+genco:metricName a rdfs:Property .
+genco:unit a rdfs:Property .
+genco:treatment a rdfs:Property .
+genco:aggregation a rdfs:Property .
+genco:population a rdfs:Property .
+genco:generationMethod a rdfs:Property .
+genco:generationSeed a rdfs:Property .
+genco:generationSeedStatus a rdfs:Property .
+genco:perturbation a rdfs:Property .
+genco:startTimeMs a rdfs:Property .
+genco:endTimeMs a rdfs:Property .
+genco:randomSeed a rdfs:Property .
+genco:parametersHash a rdfs:Property .
+genco:metricsHash a rdfs:Property .
+genco:modelRepositoryRevision a rdfs:Property .
+genco:splitArtifactHash a rdfs:Property .
+genco:comparisonTolerance a rdfs:Property .
+genco:softwareVersion a rdfs:Property .
+genco:provenanceLimitation a rdfs:Property .
+genco:reproducesRun a rdfs:Property .
+genco:environmentHash a rdfs:Property .
+genco:pythonVersion a rdfs:Property .
+genco:runtimePlatform a rdfs:Property .
+genco:torchVersion a rdfs:Property .
+genco:torchvisionVersion a rdfs:Property .
+genco:torchaudioVersion a rdfs:Property .
+genco:torchScatterVersion a rdfs:Property .
+genco:comparisonStatus a rdfs:Property .
+genco:tolerancePolicyId a rdfs:Property .
+genco:tolerancePolicyHash a rdfs:Property .
+genco:maximumVoltageDifference a rdfs:Property .
+genco:maximumPowerDifference a rdfs:Property .
+genco:trainingEpochs a rdfs:Property .
+genco:trainingBatchSize a rdfs:Property .
+genco:trainingLearningRate a rdfs:Property .
+genco:trainingOptimizer a rdfs:Property .
+genco:trainingSoftwareRevisionStatus a rdfs:Property .
+genco:checkpointBindingStatus a rdfs:Property .
+genco:authoritativeTrainingAttestation a rdfs:Property .
+genco:attestsCheckpoint a rdfs:Property .
+genco:attestsTrainingRun a rdfs:Property .
+genco:attestationId a rdfs:Property .
+genco:attestationIssuer a rdfs:Property .
+genco:attestationSource a rdfs:Property .
+genco:attestedCheckpointHash a rdfs:Property .
+genco:attestedTrainingRunId a rdfs:Property .
+genco:attestationContentHash a rdfs:Property .
+genco:attestationSignature a rdfs:Property .
+genco:attestationVerificationStatus a rdfs:Property .
+genco:trainingRunId a rdfs:Property .
+genco:trainingLoss a rdfs:Property .
+genco:validationLoss a rdfs:Property .
+genco:validationBusMseLoss a rdfs:Property .
+genco:validationGeneratorMseLoss a rdfs:Property .
+genco:validationPhysicsLoss a rdfs:Property .
+genco:validationQgViolationPenaltyLoss a rdfs:Property .
