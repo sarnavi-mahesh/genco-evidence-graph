@@ -1,0 +1,2 @@
+repository=https://github.com/gridfm/gridfm-graphkit.git
+commit=f104900245cba26d1380037eea562cf633a97484
