@@ -27,3 +27,8 @@ genco-evidence = "genco_evidence_graph.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["genco_evidence_graph*"]
+
+[tool.pytest.ini_options]
+markers = [
+  "integration: requires the supplied real case-14 reproduction artifacts",
+]
