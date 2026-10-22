@@ -38,6 +38,13 @@ from .api import (
     validate_evidence,
 )
 from .rdf import build_evidence_graph
+from .training_metadata import (
+    TrainingMetadataFileRecord,
+    TrainingMetadataManifest,
+    load_training_metadata_manifest,
+    prepare_normalized_training_metadata,
+    verify_normalized_upstream_metadata,
+)
 
 __all__ = [
     "VerifiedTrainingAttestation",
@@ -73,4 +80,9 @@ __all__ = [
     "sha256_file",
     "sha256_path",
     "stable_uri",
+    "TrainingMetadataFileRecord",
+    "TrainingMetadataManifest",
+    "load_training_metadata_manifest",
+    "prepare_normalized_training_metadata",
+    "verify_normalized_upstream_metadata",
 ]

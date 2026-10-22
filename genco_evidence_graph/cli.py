@@ -8,7 +8,6 @@ import sys
 import numpy as np
 import pandas as pd
 import pyarrow.parquet as pq
-import yaml
 
 from .adapters import (
     extract_huggingface_revision,
@@ -40,6 +39,10 @@ from .provenance import sha256_file, sha256_path
 from .rdf import build_evidence_graph, serialize_graph
 from .splits import load_split_ids, verify_split_membership
 from .validation import validate_evidence_graph
+from .training_metadata import (
+    load_training_metadata_manifest,
+    prepare_normalized_training_metadata,
+)
 
 
 def _load_verified_training_run(
@@ -846,7 +849,7 @@ def _run_baseline(args: argparse.Namespace) -> int:
             graphkit_source_record=Path(args.graphkit_source_record),
             experiment_name=args.experiment_name,
             num_workers=args.num_workers,
-            resume=args.resume,
+            reuse_verified_run=args.reuse_verified_run,
             dataset_split=args.dataset_split,
             export_embeddings=not args.no_embeddings,
         ),
@@ -908,6 +911,21 @@ def _list_scenarios(args: argparse.Namespace) -> int:
     if not args.no_header:
         print("scenario_id")
     print("\n".join(scenario_ids))
+    return 0
+
+
+def _prepare_training_metadata(args: argparse.Namespace) -> int:
+    manifest_path = prepare_normalized_training_metadata(
+        original_repository_root=args.original_upstream_root,
+        model_repository_path=args.model_repository_path,
+        run_relative_path=args.run_relative_path,
+        output_run_path=args.output_run_path,
+    )
+    manifest = load_training_metadata_manifest(manifest_path)
+    print("Normalized training metadata prepared")
+    print(f"Manifest: {manifest_path}")
+    print(f"Source revision: {manifest.source_revision}")
+    print(f"Files: {len(manifest.files)}")
     return 0
 
 
@@ -988,9 +1006,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="Generate the frozen uninstrumented prediction baseline only.",
     )
     baseline.add_argument(
+        "--reuse-verified-run",
         "--resume",
+        dest="reuse_verified_run",
         action="store_true",
-        help="Finalize existing successful graphkit outputs without rerunning inference.",
+        help=(
+            "Verify and reuse an existing completed embedding run without "
+            "rerunning GraphKit inference. --resume is a compatibility alias."
+        ),
     )
     baseline.set_defaults(handler=_run_baseline)
 
@@ -1033,6 +1056,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="Omit the scenario_id header for scripting.",
     )
     scenario_list.set_defaults(handler=_list_scenarios)
+
+    training_metadata = subparsers.add_parser(
+        "prepare-training-metadata",
+        help="Authenticate and normalize pinned upstream MLflow training metadata",
+    )
+    training_metadata.add_argument("--original-upstream-root", required=True)
+    training_metadata.add_argument("--model-repository-path", required=True)
+    training_metadata.add_argument("--run-relative-path", required=True)
+    training_metadata.add_argument("--output-run-path", required=True)
+    training_metadata.set_defaults(handler=_prepare_training_metadata)
 
     query = subparsers.add_parser("query", help="Run a SPARQL query against local Turtle")
     query.add_argument("--graph", required=True)

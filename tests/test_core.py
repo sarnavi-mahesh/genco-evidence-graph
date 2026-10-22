@@ -49,6 +49,7 @@ from genco_evidence_graph.cli import (
     _keyed_embedding_table,
     _load_verified_training_run,
     _physical_evidence,
+    build_parser,
     main,
 )
 from genco_evidence_graph.contracts import MetricSemantics, PhysicalEvidence
@@ -77,6 +78,14 @@ from genco_evidence_graph.validation import (
     validate_synthetic_evidence_graph,
 )
 from genco_evidence_graph.splits import load_split_ids, verify_split_membership
+from genco_evidence_graph.training_metadata import (
+    EXPECTED_TRAINING_METADATA_PATHS,
+    TRAINING_METADATA_NORMALIZATION,
+    load_training_metadata_manifest,
+    prepare_normalized_training_metadata,
+    training_metadata_manifest_from_dict,
+    training_metadata_manifest_to_dict,
+)
 from genco_evidence_graph.contracts import (
     DatasetProvenance,
     ModelProvenance,
@@ -2048,7 +2057,39 @@ def test_target_manifest_rejects_missing_runtime(tmp_path) -> None:
         )
 
 
-def test_selected_runtime_must_match_resume_manifest(
+@pytest.mark.parametrize(
+    ("reuse_flag", "expected"),
+    [
+        ("--reuse-verified-run", True),
+        ("--resume", True),
+        (None, False),
+    ],
+)
+def test_run_baseline_reuse_flags(reuse_flag, expected) -> None:
+    arguments = [
+        "run-baseline",
+        "--graphkit-python", "/graphkit/.venv/bin/python",
+        "--graphkit-workdir", "/graphkit",
+        "--config", "config.yaml",
+        "--checkpoint", "checkpoint.pt",
+        "--normalizer", "normalizer.pt",
+        "--data-path", "data",
+        "--split-artifact", "test.pt",
+        "--output-dir", "output",
+        "--run-name", "test-run",
+        "--graphkit-requirements-lock", "requirements.lock",
+        "--graphkit-source-record", "source.txt",
+    ]
+    if reuse_flag is not None:
+        arguments.append(reuse_flag)
+
+    args = build_parser().parse_args(arguments)
+
+    assert args.reuse_verified_run is expected
+    assert not hasattr(args, "resume")
+
+
+def test_selected_runtime_must_match_reused_run_manifest(
     tmp_path,
     monkeypatch,
 ) -> None:
@@ -2387,9 +2428,12 @@ def _training_upstream_fixture(tmp_path):
         / run_relative
     )
 
-    normalized_run.mkdir(parents=True)
     original_run.mkdir(parents=True)
     cache_run.mkdir(parents=True)
+    model_repository = tmp_path / "model-repository"
+    tree_dir = model_repository / ".cache/huggingface/trees"
+    tree_dir.mkdir(parents=True)
+    (tree_dir / f"{revision}.json").write_text("{}\n")
 
     upstream = {
         "meta.yaml": (
@@ -2399,51 +2443,360 @@ def _training_upstream_fixture(tmp_path):
         "params/args/data/split_from_existing_files": b"/private/splits",
         "tags/mlflow.source.name": b"/private/bin/gridfm_graphkit",
         "tags/mlflow.user": b"private-user",
-        "tags/mlflow.source.type": b"LOCAL",
     }
-    normalized = {
-        "meta.yaml": b"artifact_uri: artifacts\nuser_id: upstream\n",
-        "params/args/data/split_from_existing_files": b"genco-opfdata/splits",
-        "tags/mlflow.source.name": b"gridfm_graphkit",
-        "tags/mlflow.user": b"upstream",
-        "tags/mlflow.source.type": b"LOCAL",
-    }
-    records = []
-    for declared_path, upstream_bytes in upstream.items():
+    for declared_path in sorted(EXPECTED_TRAINING_METADATA_PATHS):
+        upstream_bytes = upstream.get(
+            declared_path,
+            f"upstream value for {declared_path}\n".encode(),
+        )
         original_file = original_run / declared_path
-        normalized_file = normalized_run / declared_path
         metadata_file = cache_run / f"{declared_path}.metadata"
         original_file.parent.mkdir(parents=True, exist_ok=True)
-        normalized_file.parent.mkdir(parents=True, exist_ok=True)
         metadata_file.parent.mkdir(parents=True, exist_ok=True)
         original_file.write_bytes(upstream_bytes)
-        normalized_file.write_bytes(normalized[declared_path])
         etag = hashlib.sha1(
             f"blob {len(upstream_bytes)}\0".encode() + upstream_bytes,
         ).hexdigest()
         metadata_file.write_text(f"{revision}\n{etag}\n0\n")
-        records.append(
-            {
-                "normalized_sha256": hashlib.sha256(
-                    normalized[declared_path],
-                ).hexdigest(),
-                "path": declared_path,
-                "upstream_sha256": hashlib.sha256(upstream_bytes).hexdigest(),
-            },
-        )
 
-    manifest = {
-        "files": records,
-        "format_version": 2,
-        "normalization": TRAINING_METADATA_NORMALIZATION,
-        "source_repository": "gridfm/genco-opfdata",
-        "source_revision": revision,
-        "source_run_id": run_id,
-    }
-    manifest_path = normalized_run / "upstream_source_manifest.json"
-    manifest_path.write_text(json.dumps(manifest))
+    manifest_path = prepare_normalized_training_metadata(
+        original_repository_root=original_root,
+        model_repository_path=model_repository,
+        run_relative_path=run_relative,
+        output_run_path=normalized_run,
+    )
 
     return normalized_run, original_root, revision, manifest_path
+
+
+def test_training_metadata_manifest_model_round_trips(tmp_path) -> None:
+    _, _, _, manifest_path = _training_upstream_fixture(tmp_path)
+    manifest = load_training_metadata_manifest(manifest_path)
+    assert len(manifest.files) == 79
+    assert training_metadata_manifest_from_dict(
+        training_metadata_manifest_to_dict(manifest),
+    ) == manifest
+    unsorted = type(manifest)(
+        manifest.format_version,
+        manifest.source_repository,
+        manifest.source_revision,
+        manifest.source_run_id,
+        manifest.normalization,
+        tuple(reversed(manifest.files)),
+    )
+    assert [item["path"] for item in training_metadata_manifest_to_dict(unsorted)["files"]] == sorted(
+        record.path for record in manifest.files
+    )
+
+
+def test_training_metadata_manifest_loader_rejects_duplicate_json_keys(
+    tmp_path,
+) -> None:
+    malformed = tmp_path / "duplicate.json"
+    malformed.write_text('{"format_version": 2, "format_version": 2}')
+    with pytest.raises(ValueError, match="Duplicate JSON object key"):
+        load_training_metadata_manifest(malformed)
+
+
+@pytest.mark.parametrize(
+    ("mutation", "message"),
+    [
+        ("unknown", "unknown"),
+        ("missing", "missing"),
+        ("wrong_type", "source run ID"),
+        ("boolean_version", "integer"),
+        ("unsupported_version", "Unsupported"),
+        ("revision", "revision"),
+        ("hash", "SHA-256"),
+        ("duplicate", "Duplicate"),
+        ("absolute", "Unsafe"),
+        ("parent", "Unsafe"),
+        ("backslash", "Unsafe"),
+        ("unsorted", "canonical path order"),
+        ("normalization", "normalization policy"),
+    ],
+)
+def test_training_metadata_manifest_parser_rejects_malformed_values(
+    tmp_path,
+    mutation,
+    message,
+) -> None:
+    _, _, _, manifest_path = _training_upstream_fixture(tmp_path)
+    value = json.loads(manifest_path.read_text())
+    if mutation == "unknown":
+        value["extra"] = 1
+    elif mutation == "missing":
+        del value["source_run_id"]
+    elif mutation == "wrong_type":
+        value["source_run_id"] = 42
+    elif mutation == "boolean_version":
+        value["format_version"] = True
+    elif mutation == "unsupported_version":
+        value["format_version"] = 3
+    elif mutation == "revision":
+        value["source_revision"] = "not-a-revision"
+    elif mutation == "hash":
+        value["files"][0]["upstream_sha256"] = "z" * 64
+    elif mutation == "duplicate":
+        value["files"].append(dict(value["files"][0]))
+    elif mutation == "absolute":
+        value["files"][0]["path"] = "/tmp/unsafe"
+    elif mutation == "parent":
+        value["files"][0]["path"] = "../unsafe"
+    elif mutation == "backslash":
+        value["files"][0]["path"] = "artifacts\\unsafe"
+    elif mutation == "unsorted":
+        value["files"].reverse()
+    elif mutation == "normalization":
+        value["normalization"]["transforms"]["extra"] = "not-approved"
+    with pytest.raises(ValueError, match=message):
+        training_metadata_manifest_from_dict(value)
+
+
+def test_normalized_training_metadata_generation_is_complete_and_deterministic(
+    tmp_path,
+) -> None:
+    normalized, original_root, revision, manifest_path = _training_upstream_fixture(tmp_path)
+    manifest = load_training_metadata_manifest(manifest_path)
+    assert manifest.source_revision == revision
+    assert {record.path for record in manifest.files} == EXPECTED_TRAINING_METADATA_PATHS
+    verify_normalized_upstream_metadata(normalized, original_root, revision)
+
+    run_relative = Path("mlflow/train/case14_ieee/seed42/training-run")
+    second_output = tmp_path / "second" / run_relative
+    second_manifest = prepare_normalized_training_metadata(
+        original_repository_root=original_root,
+        model_repository_path=tmp_path / "model-repository",
+        run_relative_path=run_relative,
+        output_run_path=second_output,
+    )
+    assert manifest_path.read_bytes() == second_manifest.read_bytes()
+    original_run = original_root / run_relative
+    changed = {
+        path
+        for path in EXPECTED_TRAINING_METADATA_PATHS
+        if (original_run / path).read_bytes() != (normalized / path).read_bytes()
+    }
+    assert changed == set(TRAINING_METADATA_NORMALIZATION["transforms"])
+    for path in EXPECTED_TRAINING_METADATA_PATHS - changed:
+        assert (original_run / path).read_bytes() == (normalized / path).read_bytes()
+
+
+def test_training_metadata_generator_rejects_etag_failure_and_cleans_temporary(
+    tmp_path,
+) -> None:
+    normalized, original, revision, _ = _training_upstream_fixture(tmp_path)
+    output = tmp_path / "failed" / normalized.relative_to(tmp_path / "normalized")
+    cache_record = (
+        original
+        / ".cache/huggingface/download/mlflow/train/case14_ieee/seed42/training-run/meta.yaml.metadata"
+    )
+    cache_record.write_text(f"{revision}\n{'0' * 40}\n")
+    with pytest.raises(ValueError, match="cache ETag"):
+        prepare_normalized_training_metadata(
+            original_repository_root=original,
+            model_repository_path=tmp_path / "model-repository",
+            run_relative_path="mlflow/train/case14_ieee/seed42/training-run",
+            output_run_path=output,
+        )
+    assert not output.exists()
+    assert not list(output.parent.glob(".training-run.tmp-*"))
+
+def test_training_metadata_generator_accepts_sha256_cache_etag(tmp_path) -> None:
+    _, original, revision, _ = _training_upstream_fixture(tmp_path)
+    run_relative = Path("mlflow/train/case14_ieee/seed42/training-run")
+    declared_path = (
+        "artifacts/test_plots/case14_ieee/"
+        "case14_ieee_correlation_PQ.png"
+    )
+
+    original_file = original / run_relative / declared_path
+    cache_record = (
+        original
+        / ".cache/huggingface/download"
+        / run_relative
+        / f"{declared_path}.metadata"
+    )
+    sha256_etag = hashlib.sha256(original_file.read_bytes()).hexdigest()
+    cache_record.write_text(f"{revision}\n{sha256_etag}\n0\n")
+
+    output = tmp_path / "sha256-output" / run_relative
+    manifest_path = prepare_normalized_training_metadata(
+        original_repository_root=original,
+        model_repository_path=tmp_path / "model-repository",
+        run_relative_path=run_relative,
+        output_run_path=output,
+    )
+
+    manifest = load_training_metadata_manifest(manifest_path)
+    record = next(item for item in manifest.files if item.path == declared_path)
+    assert record.upstream_sha256 == sha256_etag
+    assert (output / declared_path).read_bytes() == original_file.read_bytes()
+
+
+def test_training_metadata_generator_rejects_mismatched_sha256_cache_etag(
+    tmp_path,
+) -> None:
+    _, original, revision, _ = _training_upstream_fixture(tmp_path)
+    run_relative = Path("mlflow/train/case14_ieee/seed42/training-run")
+    declared_path = (
+        "artifacts/test_plots/case14_ieee/"
+        "case14_ieee_correlation_PQ.png"
+    )
+
+    cache_record = (
+        original
+        / ".cache/huggingface/download"
+        / run_relative
+        / f"{declared_path}.metadata"
+    )
+    wrong_etag = hashlib.sha256(b"not the source file").hexdigest()
+    cache_record.write_text(f"{revision}\n{wrong_etag}\n0\n")
+
+    output = tmp_path / "sha256-failure" / run_relative
+    with pytest.raises(ValueError, match="disagrees with cache ETag"):
+        prepare_normalized_training_metadata(
+            original_repository_root=original,
+            model_repository_path=tmp_path / "model-repository",
+            run_relative_path=run_relative,
+            output_run_path=output,
+        )
+
+    assert not output.exists()
+    assert not list(output.parent.glob(".training-run.tmp-*"))
+
+def test_training_metadata_generator_rejects_nonempty_and_overlapping_output(
+    tmp_path,
+) -> None:
+    normalized, original, _, _ = _training_upstream_fixture(tmp_path)
+    nonempty = tmp_path / "nonempty" / "training-run"
+    nonempty.mkdir(parents=True)
+    (nonempty / "sentinel").write_text("keep")
+    args = {
+        "original_repository_root": original,
+        "model_repository_path": tmp_path / "model-repository",
+        "run_relative_path": "mlflow/train/case14_ieee/seed42/training-run",
+    }
+    with pytest.raises(ValueError, match="not empty"):
+        prepare_normalized_training_metadata(**args, output_run_path=nonempty)
+    with pytest.raises(ValueError, match="overlap"):
+        prepare_normalized_training_metadata(**args, output_run_path=original)
+    assert normalized.is_dir()
+
+
+@pytest.mark.parametrize("mutation", ["missing", "unexpected", "symlink", "cache"])
+def test_training_metadata_generator_rejects_unsafe_or_incomplete_inputs(
+    tmp_path,
+    mutation,
+) -> None:
+    normalized, original, _, _ = _training_upstream_fixture(tmp_path)
+    run_relative = Path("mlflow/train/case14_ieee/seed42/training-run")
+    original_run = original / run_relative
+    first = original_run / "meta.yaml"
+    if mutation == "missing":
+        first.unlink()
+    elif mutation == "unexpected":
+        (original_run / "unexpected.txt").write_text("extra")
+    elif mutation == "symlink":
+        first.unlink()
+        first.symlink_to(original_run / "tags/mlflow.user")
+    elif mutation == "cache":
+        (
+            original
+            / ".cache/huggingface/download"
+            / run_relative
+            / "meta.yaml.metadata"
+        ).unlink()
+
+    output = tmp_path / f"failed-{mutation}" / run_relative
+    with pytest.raises((FileNotFoundError, ValueError)):
+        prepare_normalized_training_metadata(
+            original_repository_root=original,
+            model_repository_path=tmp_path / "model-repository",
+            run_relative_path=run_relative,
+            output_run_path=output,
+        )
+    assert not output.exists()
+    assert normalized.is_dir()
+
+
+def test_prepare_training_metadata_cli_generates_manifest(tmp_path, capsys) -> None:
+    normalized, original, revision, _ = _training_upstream_fixture(tmp_path)
+    output = tmp_path / "cli-output" / normalized.relative_to(tmp_path / "normalized")
+    result = main(
+        [
+            "prepare-training-metadata",
+            "--original-upstream-root",
+            str(original),
+            "--model-repository-path",
+            str(tmp_path / "model-repository"),
+            "--run-relative-path",
+            "mlflow/train/case14_ieee/seed42/training-run",
+            "--output-run-path",
+            str(output),
+        ],
+    )
+    captured = capsys.readouterr()
+    assert result == 0
+    assert "Normalized training metadata prepared" in captured.out
+    assert str(output / "upstream_source_manifest.json") in captured.out
+    assert f"Source revision: {revision}" in captured.out
+    assert "Files: 79" in captured.out
+
+
+def test_prepare_training_metadata_cli_rejects_nonempty_output(tmp_path, capsys) -> None:
+    normalized, original, _, _ = _training_upstream_fixture(tmp_path)
+    output = tmp_path / "cli-nonempty" / "training-run"
+    output.mkdir(parents=True)
+    (output / "keep.txt").write_text("keep")
+    result = main(
+        [
+            "prepare-training-metadata",
+            "--original-upstream-root",
+            str(original),
+            "--model-repository-path",
+            str(tmp_path / "model-repository"),
+            "--run-relative-path",
+            "mlflow/train/case14_ieee/seed42/training-run",
+            "--output-run-path",
+            str(output),
+        ],
+    )
+    captured = capsys.readouterr()
+    assert result == 2
+    assert captured.err.startswith("error: ")
+    assert (output / "keep.txt").read_text() == "keep"
+    assert normalized.is_dir()
+
+
+def test_prepare_training_metadata_cli_failure_has_no_partial_output(
+    tmp_path,
+    capsys,
+) -> None:
+    normalized, original, revision, _ = _training_upstream_fixture(tmp_path)
+    cache_record = (
+        original
+        / ".cache/huggingface/download/mlflow/train/case14_ieee/seed42/training-run/meta.yaml.metadata"
+    )
+    cache_record.write_text(f"{'b' * 40}\n{'0' * 40}\n")
+    output = tmp_path / "cli-failed" / normalized.relative_to(tmp_path / "normalized")
+    result = main(
+        [
+            "prepare-training-metadata",
+            "--original-upstream-root",
+            str(original),
+            "--model-repository-path",
+            str(tmp_path / "model-repository"),
+            "--run-relative-path",
+            "mlflow/train/case14_ieee/seed42/training-run",
+            "--output-run-path",
+            str(output),
+        ],
+    )
+    captured = capsys.readouterr()
+    assert result == 2
+    assert captured.err.startswith("error: ")
+    assert not output.exists()
 
 
 def test_normalized_upstream_metadata_verifies_original_upstream_chain(
@@ -2530,12 +2883,53 @@ def test_normalized_upstream_metadata_rejects_omitted_forged_file(
     ]
     manifest_path.write_text(json.dumps(manifest))
 
-    with pytest.raises(ValueError, match="exact normalized.*inventory"):
+    with pytest.raises(ValueError, match="approved inventory"):
         verify_normalized_upstream_metadata(
             normalized,
             original,
             revision,
         )
+
+
+def test_normalized_upstream_metadata_rejects_added_undeclared_file(
+    tmp_path,
+) -> None:
+    normalized, original, revision, _ = _training_upstream_fixture(tmp_path)
+    (normalized / "extra.txt").write_text("undeclared")
+    with pytest.raises(
+        ValueError,
+        match="does not match the approved training metadata inventory",
+    ):
+        verify_normalized_upstream_metadata(normalized, original, revision)
+
+
+def test_training_metadata_generator_requires_exact_transform_path_set(
+    tmp_path,
+) -> None:
+    normalized, original, revision, _ = _training_upstream_fixture(tmp_path)
+    run_relative = Path("mlflow/train/case14_ieee/seed42/training-run")
+    original_meta = original / run_relative / "meta.yaml"
+    original_meta.write_bytes((normalized / "meta.yaml").read_bytes())
+    metadata = (
+        original
+        / ".cache/huggingface/download"
+        / run_relative
+        / "meta.yaml.metadata"
+    )
+    data = original_meta.read_bytes()
+    etag = hashlib.sha1(f"blob {len(data)}\0".encode() + data).hexdigest()
+    metadata.write_text(f"{revision}\n{etag}\n0\n")
+
+    output = tmp_path / "transform-mismatch" / run_relative
+    with pytest.raises(ValueError, match="transformed path set"):
+        prepare_normalized_training_metadata(
+            original_repository_root=original,
+            model_repository_path=tmp_path / "model-repository",
+            run_relative_path=run_relative,
+            output_run_path=output,
+        )
+    assert not output.exists()
+    assert not list(output.parent.glob(".training-run.tmp-*"))
 
 
 def test_training_metadata_is_not_parsed_before_authentication(
@@ -2623,6 +3017,11 @@ def test_normalized_upstream_metadata_rejects_duplicate_manifest_path(
             "source_run_id",
             "substituted-run",
             "source run ID",
+        ),
+        (
+            "source_revision",
+            "b" * 40,
+            "source revision",
         ),
     ],
 )

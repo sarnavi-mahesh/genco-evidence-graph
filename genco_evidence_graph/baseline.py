@@ -39,7 +39,7 @@ class BaselineInferenceSpec:
     graphkit_source_record: Path
     experiment_name: str = "genco-evidence-baseline"
     num_workers: int = 0
-    resume: bool = False
+    reuse_verified_run: bool = False
     dataset_split: str = "test"
     export_embeddings: bool = True
 
@@ -1060,9 +1060,11 @@ def run_baseline_inference(spec: BaselineInferenceSpec) -> BaselineInferenceResu
     data_path = spec.data_path.resolve()
     split_path = spec.split_artifact.resolve()
     manifest_path = output_dir / "run_manifest.json"
-    if spec.resume:
+    if spec.reuse_verified_run:
         if not spec.export_embeddings:
-            raise ValueError("Resume is supported only for manifested embedding runs")
+            raise ValueError(
+                "Verified-run reuse is supported only for manifested embedding runs",
+            )
         verified = verify_run_manifest(
             manifest_path,
             prediction_path=output_dir / "case14_ieee_predictions.parquet",
@@ -1080,9 +1082,9 @@ def run_baseline_inference(spec: BaselineInferenceSpec) -> BaselineInferenceResu
         )
         manifest = json.loads(manifest_path.read_text())
         if manifest.get("run_name") != spec.run_name:
-            raise ValueError("Resume run name disagrees with existing manifest")
+            raise ValueError("Reused run name disagrees with existing manifest")
         if manifest.get("dataset_split") != spec.dataset_split:
-            raise ValueError("Resume dataset split disagrees with existing manifest")
+            raise ValueError("Reused dataset split disagrees with existing manifest")
         _verify_selected_runtime(
             graphkit_python=graphkit_python,
             graphkit_workdir=spec.graphkit_workdir,
@@ -1096,7 +1098,11 @@ def run_baseline_inference(spec: BaselineInferenceSpec) -> BaselineInferenceResu
             mlflow_run_dir=verified.mlflow_run_dir,
             run_id=verified.run_id,
         )
-    if output_dir.exists() and any(output_dir.iterdir()) and not spec.resume:
+    if (
+        output_dir.exists()
+        and any(output_dir.iterdir())
+        and not spec.reuse_verified_run
+    ):
         raise ValueError(f"Baseline output directory must be empty: {output_dir}")
     output_dir.mkdir(parents=True, exist_ok=True)
     graphkit_workdir = spec.graphkit_workdir.resolve()

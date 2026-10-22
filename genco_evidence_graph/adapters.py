@@ -2,15 +2,21 @@
 
 from ast import literal_eval
 from dataclasses import dataclass
-import hashlib
-import json
 from pathlib import Path
-import re
 import numpy as np
 
 import yaml
 
 from .provenance import sha256_path
+from .training_metadata import (
+    TRAINING_METADATA_NORMALIZATION as _TRAINING_METADATA_NORMALIZATION,
+    extract_huggingface_revision as _extract_huggingface_revision,
+    verify_normalized_upstream_metadata as _verify_normalized_upstream_metadata,
+)
+
+TRAINING_METADATA_NORMALIZATION = _TRAINING_METADATA_NORMALIZATION
+extract_huggingface_revision = _extract_huggingface_revision
+verify_normalized_upstream_metadata = _verify_normalized_upstream_metadata
 
 def _read(path: Path) -> str:
     if not path.is_file():
@@ -213,215 +219,6 @@ def load_training_run_metadata(path: str | Path) -> TrainingRunMetadata:
     return metadata
 
 
-def _huggingface_etag(path: Path) -> str:
-    data = path.read_bytes()
-    return hashlib.sha1(
-        f"blob {len(data)}\0".encode() + data,
-    ).hexdigest()
-
-
-TRAINING_METADATA_NORMALIZATION = {
-    "policy_id": "genco-training-metadata-normalization-v1",
-    "transforms": {
-        "meta.yaml": "portable-artifact-uri-and-upstream-user",
-        "params/args/data/split_from_existing_files": "repository-relative-split-path",
-        "tags/mlflow.source.name": "portable-source-name",
-        "tags/mlflow.user": "upstream-user",
-    },
-}
-
-
-def _normalized_training_metadata_bytes(
-    declared_path: str,
-    original_bytes: bytes,
-) -> bytes:
-    if declared_path == "meta.yaml":
-        value = yaml.safe_load(original_bytes)
-        if not isinstance(value, dict):
-            raise ValueError(
-                "Original upstream training metadata meta.yaml is not a mapping",
-            )
-        value["artifact_uri"] = "artifacts"
-        value["user_id"] = "upstream"
-        return yaml.safe_dump(value, sort_keys=False).encode()
-    replacements = {
-        "params/args/data/split_from_existing_files": b"genco-opfdata/splits",
-        "tags/mlflow.source.name": b"gridfm_graphkit",
-        "tags/mlflow.user": b"upstream",
-    }
-    return replacements.get(declared_path, original_bytes)
-
-
-def verify_normalized_upstream_metadata(
-    path: str | Path,
-    original_repository_root: str | Path,
-    expected_repository_revision: str,
-) -> None:
-    """Verify normalized training metadata against its pinned upstream bytes."""
-    run_path = Path(path)
-    original_root = Path(original_repository_root)
-    manifest_path = run_path / "upstream_source_manifest.json"
-    manifest = json.loads(_read(manifest_path))
-
-    if manifest.get("format_version") != 2:
-        raise ValueError("Unsupported training metadata source manifest format")
-    if manifest.get("source_repository") != "gridfm/genco-opfdata":
-        raise ValueError("Unexpected training metadata source repository")
-    if manifest.get("source_revision") != expected_repository_revision:
-        raise ValueError(
-            "Training metadata source revision disagrees with model repository",
-        )
-    if manifest.get("source_run_id") != run_path.name:
-        raise ValueError("Training metadata source run ID disagrees with run path")
-    if manifest.get("normalization") != TRAINING_METADATA_NORMALIZATION:
-        raise ValueError(
-            "Training metadata normalization policy is not the approved "
-            f"{TRAINING_METADATA_NORMALIZATION['policy_id']!r}",
-        )
-
-    try:
-        mlflow_index = run_path.parts.index("mlflow")
-    except ValueError as error:
-        raise ValueError(
-            f"Training metadata path is not under an MLflow tree: {run_path}",
-        ) from error
-
-    run_relative = Path(*run_path.parts[mlflow_index:])
-    original_run_path = original_root / run_relative
-    cache_run_path = (
-        original_root
-        / ".cache/huggingface/download"
-        / run_relative
-    )
-
-    records = manifest.get("files")
-    if not isinstance(records, list) or not records:
-        raise ValueError("Training metadata source manifest has no files")
-
-    seen_paths: set[str] = set()
-    for record in records:
-        if not isinstance(record, dict):
-            raise ValueError("Invalid training metadata source manifest record")
-        try:
-            declared_path = str(record["path"])
-            upstream_sha256 = str(record["upstream_sha256"])
-            normalized_sha256 = str(record["normalized_sha256"])
-        except KeyError as error:
-            raise ValueError(
-                "Incomplete training metadata source manifest record",
-            ) from error
-
-        relative_path = Path(declared_path)
-        if (
-            relative_path.is_absolute()
-            or declared_path in {"", "."}
-            or ".." in relative_path.parts
-        ):
-            raise ValueError(
-                f"Unsafe training metadata manifest path: {declared_path}",
-            )
-        if declared_path in seen_paths:
-            raise ValueError(
-                f"Duplicate training metadata manifest path: {declared_path}",
-            )
-        seen_paths.add(declared_path)
-
-        original = original_run_path / relative_path
-        normalized = run_path / relative_path
-        metadata = cache_run_path / f"{declared_path}.metadata"
-
-        if not original.is_file():
-            raise FileNotFoundError(
-                "Original upstream training metadata does not exist: "
-                f"{original}",
-            )
-        if not normalized.is_file():
-            raise FileNotFoundError(
-                f"Normalized training metadata does not exist: {normalized}",
-            )
-
-        metadata_lines = _read(metadata).splitlines()
-        if len(metadata_lines) < 2:
-            raise ValueError(
-                f"Incomplete Hugging Face cache metadata: {metadata}",
-            )
-        if metadata_lines[0] != expected_repository_revision:
-            raise ValueError(
-                f"Hugging Face revision disagrees for: {original}",
-            )
-
-        etag = metadata_lines[1]
-        if not re.fullmatch(r"[0-9a-f]{40}", etag):
-            raise ValueError(
-                f"Unsupported Hugging Face cache ETag for: {original}",
-            )
-        if _huggingface_etag(original) != etag:
-            raise ValueError(
-                "Original upstream training metadata disagrees with cache ETag: "
-                f"{original}",
-            )
-        if sha256_path(original) != upstream_sha256:
-            raise ValueError(
-                f"Original upstream training metadata hash disagrees: {original}",
-            )
-        expected_bytes = _normalized_training_metadata_bytes(
-            declared_path,
-            original.read_bytes(),
-        )
-        expected_hash = hashlib.sha256(expected_bytes).hexdigest()
-        if normalized_sha256 != expected_hash:
-            raise ValueError(
-                f"Declared normalized training metadata hash disagrees with "
-                f"deterministic transform: {normalized}",
-            )
-        if normalized.read_bytes() != expected_bytes:
-            raise ValueError(
-                f"Normalized training metadata disagrees with deterministic "
-                f"transform: {normalized}",
-            )
-
-    normalized_inventory = {
-        item.relative_to(run_path).as_posix()
-        for item in run_path.rglob("*")
-        if item.is_file() and item != manifest_path
-    }
-    if seen_paths != normalized_inventory:
-        raise ValueError(
-            "Training metadata manifest does not match the exact normalized "
-            "file inventory: "
-            f"undeclared_normalized={sorted(normalized_inventory - seen_paths)}, "
-            f"missing_normalized={sorted(seen_paths - normalized_inventory)}",
-        )
-
-    transformed_paths = {
-        path
-        for path in seen_paths
-        if _normalized_training_metadata_bytes(
-            path,
-            (original_run_path / path).read_bytes(),
-        )
-        != (original_run_path / path).read_bytes()
-    }
-    if transformed_paths != set(TRAINING_METADATA_NORMALIZATION["transforms"]):
-        raise ValueError(
-            "Training metadata transformed path set disagrees with the approved "
-            "normalization policy",
-        )
-
-
-def extract_huggingface_revision(raw_dataset_path: str | Path) -> str:
-    tree_dir = Path(raw_dataset_path) / ".cache" / "huggingface" / "trees"
-    revisions = sorted(
-        path.stem
-        for path in tree_dir.glob("*.json")
-        if re.fullmatch(r"[0-9a-f]{40}", path.stem)
-    )
-    if len(revisions) != 1:
-        raise ValueError(
-            f"Expected exactly one Hugging Face revision under {tree_dir}, "
-            f"found {revisions}",
-        )
-    return revisions[0]
 
 
 def verify_run_matches_config(
