@@ -1,6 +1,7 @@
 # Markdown: keep only the root project readme visible to Git
 *.md
 !/readme.md
+!/reproduction_graphkit.md
 
 # macOS and IDEs
 .DS_Store
