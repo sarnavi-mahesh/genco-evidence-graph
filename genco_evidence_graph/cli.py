@@ -7,7 +7,6 @@ import sys
 
 import numpy as np
 import pandas as pd
-import pyarrow.parquet as pq
 
 from .adapters import (
     extract_huggingface_revision,
@@ -34,7 +33,9 @@ from .contracts import (
     PredictionEvidence,
     TrainingEvidenceAssociation,
 )
-from .embeddings import ReferenceIndex
+from .embeddings import (
+    ReferenceIndex,
+    load_pooled_keyed_embeddings,)
 from .provenance import sha256_file, sha256_path
 from .rdf import build_evidence_graph, serialize_graph
 from .splits import load_split_ids, verify_split_membership
@@ -44,6 +45,7 @@ from .training_metadata import (
     prepare_normalized_training_metadata,
 )
 
+_keyed_embedding_table = load_pooled_keyed_embeddings
 
 def _load_verified_training_run(
     training_run_path: Path,
@@ -62,139 +64,6 @@ def _load_verified_training_run(
         load_training_run_metadata(training_run_path),
         model_repository_revision,
     )
-
-
-def _keyed_embedding_table(
-    path: Path,
-    expected_split: str,
-) -> tuple[list[str], np.ndarray]:
-    if not path.is_file():
-        raise FileNotFoundError(f"Embedding artifact does not exist: {path}")
-    parquet = pq.ParquetFile(path)
-    required = {
-        "scenario_id",
-        "entity_type",
-        "entity_id",
-        "correction_step",
-        "embedding_stage",
-        "embedding",
-        "dataset_split",
-    }
-    if not required.issubset(parquet.schema_arrow.names):
-        raise ValueError(
-            f"{path} must contain keyed embedding columns: "
-            f"{', '.join(sorted(required))}",
-        )
-
-    sums: dict[str, dict[str, np.ndarray]] = {"bus": {}, "generator": {}}
-    counts: dict[str, dict[str, int]] = {"bus": {}, "generator": {}}
-    completed_groups: set[tuple[str, str]] = set()
-    current_group: tuple[str, str] | None = None
-    current_entity_ids: set[int] = set()
-    embedding_dimension: int | None = None
-
-    def complete_group() -> None:
-        nonlocal current_group, current_entity_ids
-        if current_group is None:
-            return
-        if current_entity_ids != set(range(len(current_entity_ids))):
-            raise ValueError(
-                f"{path} has incomplete or non-contiguous entity IDs for "
-                f"{current_group[0]} scenario {current_group[1]}",
-            )
-        completed_groups.add(current_group)
-
-    for batch in parquet.iter_batches(
-        columns=[
-            "scenario_id",
-            "entity_type",
-            "entity_id",
-            "correction_step",
-            "embedding_stage",
-            "embedding",
-            "dataset_split",
-        ],
-        batch_size=50_000,
-    ):
-        scenario_ids = np.asarray(batch.column(0))
-        entity_types = np.asarray(batch.column(1))
-        entity_ids = np.asarray(batch.column(2))
-        correction_steps = batch.column(3)
-        embedding_stages = np.asarray(batch.column(4))
-        embeddings = np.asarray(batch.column(5).to_pylist(), dtype=float)
-        dataset_splits = np.asarray(batch.column(6))
-        if embeddings.ndim != 2 or embeddings.shape[1] == 0:
-            raise ValueError(f"{path} contains invalid embedding vectors")
-        if embedding_dimension is None:
-            embedding_dimension = embeddings.shape[1]
-        elif embeddings.shape[1] != embedding_dimension:
-            raise ValueError(f"{path} contains mixed embedding dimensions")
-        if not np.isfinite(embeddings).all():
-            raise ValueError(f"{path} contains non-finite embeddings")
-        if set(dataset_splits) != {expected_split}:
-            raise ValueError(
-                f"{path} must contain only dataset_split={expected_split!r}",
-            )
-        if set(embedding_stages) != {"final"}:
-            raise ValueError(f"{path} must contain only embedding_stage='final'")
-        if correction_steps.null_count != batch.num_rows:
-            raise ValueError(
-                f"{path} final embeddings must have null correction_step",
-            )
-        invalid_types = set(entity_types) - {"bus", "generator"}
-        if invalid_types:
-            raise ValueError(f"{path} contains unsupported entity types: {invalid_types}")
-
-        for scenario_id, entity_type, entity_id in zip(
-            scenario_ids,
-            entity_types,
-            entity_ids,
-        ):
-            group = (str(entity_type), str(scenario_id))
-            if group != current_group:
-                complete_group()
-                if group in completed_groups:
-                    raise ValueError(
-                        f"{path} contains non-contiguous duplicate entity group {group}",
-                    )
-                current_group = group
-                current_entity_ids = set()
-            numeric_entity_id = int(entity_id)
-            if numeric_entity_id in current_entity_ids:
-                raise ValueError(
-                    f"{path} contains duplicate entity key "
-                    f"({scenario_id}, {entity_type}, {numeric_entity_id})",
-                )
-            current_entity_ids.add(numeric_entity_id)
-
-        for entity_type in ("bus", "generator"):
-            mask = entity_types == entity_type
-            for scenario_id in np.unique(scenario_ids[mask]):
-                key = str(scenario_id)
-                values = embeddings[mask & (scenario_ids == scenario_id)]
-                if key in sums[entity_type]:
-                    sums[entity_type][key] += values.sum(axis=0)
-                    counts[entity_type][key] += len(values)
-                else:
-                    sums[entity_type][key] = values.sum(axis=0)
-                    counts[entity_type][key] = len(values)
-    complete_group()
-
-    scenario_ids = sorted(set(sums["bus"]) | set(sums["generator"]))
-    if set(sums["bus"]) != set(sums["generator"]):
-        raise ValueError(f"Keyed embedding artifact has unaligned entity scenario IDs: {path}")
-    pooled = np.stack(
-        [
-            np.concatenate(
-                [
-                    sums["bus"][scenario_id] / counts["bus"][scenario_id],
-                    sums["generator"][scenario_id] / counts["generator"][scenario_id],
-                ],
-            )
-            for scenario_id in scenario_ids
-        ],
-    )
-    return scenario_ids, pooled
 
 
 def _physical_evidence(
@@ -478,7 +347,7 @@ def _build_evidence(args: argparse.Namespace) -> int:
         comparison.maximum_absolute_differences,
     )
 
-    target_ids, target_matrix = _keyed_embedding_table(target_path, "test")
+    target_ids, target_matrix = (load_pooled_keyed_embeddings(target_path,"test",))
     verify_split_membership(
         target_ids,
         args.split_artifact,
@@ -542,7 +411,7 @@ def _build_evidence(args: argparse.Namespace) -> int:
         args.reference_split_artifact,
         "Checkpoint training split",
     )
-    reference_ids, reference_matrix = _keyed_embedding_table(reference_path, "train")
+    reference_ids, reference_matrix = (load_pooled_keyed_embeddings(reference_path,"train",))
     verify_split_membership(
         reference_ids,
         args.reference_split_artifact,
@@ -929,6 +798,204 @@ def _prepare_training_metadata(args: argparse.Namespace) -> int:
     return 0
 
 
+def _score_scenarios(
+    args: argparse.Namespace,
+) -> int:
+    from .scenario_selection import (
+        ScenarioScoringSpec,
+        score_scenarios,
+    )
+
+    def report_progress(
+        completed: int,
+        total: int,
+    ) -> None:
+        print(
+            "Scored reference rows "
+            f"{completed:,} of {total:,}",
+            flush=True,
+        )
+
+    result = score_scenarios(
+        ScenarioScoringSpec(
+            target_keyed_embeddings=Path(
+                args.target_keyed_embeddings
+            ),
+            reference_keyed_embeddings=Path(
+                args.reference_keyed_embeddings
+            ),
+            prediction_parquet=Path(
+                args.prediction_parquet
+            ),
+            test_split=Path(args.test_split),
+            train_split=Path(args.train_split),
+            target_run_manifest=Path(
+                args.target_run_manifest
+            ),
+            reference_run_manifest=Path(
+                args.reference_run_manifest
+            ),
+            output=Path(args.output),
+            manifest_output=Path(
+                args.manifest_output
+            ),
+            device=args.device,
+            query_block_size=args.query_block_size,
+            reference_block_size=(
+                args.reference_block_size
+            ),
+        ),
+        progress=report_progress,
+    )
+
+    print(
+        f"Wrote {result.scenario_count:,} scenario scores "
+        f"against {result.reference_count:,} references "
+        f"to {result.output}"
+    )
+    print(f"Device: {result.device}")
+
+    for name, seconds in sorted(
+        result.timings_seconds.items()
+    ):
+        print(f"Timing {name}: {seconds:.3f}s")
+
+    print(f"Manifest: {result.manifest}")
+    return 0
+
+def _summarize_scores(
+    args: argparse.Namespace,
+) -> int:
+    from .scenario_selection import (
+        ScoreSummarySpec,
+        summarize_score_distributions,
+    )
+
+    result = summarize_score_distributions(
+        ScoreSummarySpec(
+            scores=Path(args.scores),
+            score_manifest=Path(
+                args.score_manifest
+            ),
+            output=Path(args.output),
+        )
+    )
+
+    print(
+        f"Summarized {result.scenario_count:,} "
+        f"scenario scores"
+    )
+    print(
+        "Spearman distance vs mean absolute PBE: "
+        f"{result.spearman:.10g}"
+    )
+
+    print("Selection thresholds:")
+    for name, value in sorted(
+        result.thresholds.items()
+    ):
+        print(f"  {name}: {value:.10g}")
+
+    print("Group candidate counts:")
+    for name, count in sorted(
+        result.group_candidate_counts.items()
+    ):
+        print(f"  {name}: {count:,}")
+
+    print(
+        "Excluded scenarios: "
+        f"{result.excluded_scenario_count:,}"
+    )
+    print(f"Summary: {result.output}")
+    return 0
+
+
+def _select_cohort(
+    args: argparse.Namespace,
+) -> int:
+    from .scenario_selection import (
+        ContrastingScenarioSelectionSpec,
+        select_contrasting_scenarios,
+    )
+
+    result = select_contrasting_scenarios(
+        ContrastingScenarioSelectionSpec(
+            scores=Path(args.scores),
+            score_manifest=Path(
+                args.score_manifest
+            ),
+            summary=Path(args.summary),
+            output=Path(args.output),
+            manifest_output=Path(
+                args.manifest_output
+            ),
+            diagnostics_output=Path(
+                args.diagnostics_output
+            ),
+            training_reference_ids_output=Path(
+                args.training_reference_ids_output
+            ),
+        )
+    )
+
+    print(
+        f"Wrote {result.selected_scenario_count} "
+        f"selected test scenarios to {result.output}"
+    )
+    print(
+        f"Wrote {result.selected_reference_count} "
+        "deduplicated training reference IDs to "
+        f"{result.training_reference_ids}"
+    )
+    print(
+        f"Diagnostics: {result.diagnostics}"
+    )
+    print(f"Manifest: {result.manifest}")
+    return 0
+
+
+def _build_cohort_provenance(
+    args: argparse.Namespace,
+) -> int:
+    from .scenario_selection_provenance import (
+        CohortProvenanceSpec,
+        write_cohort_provenance,
+    )
+
+    result = write_cohort_provenance(
+        CohortProvenanceSpec(
+            scores=Path(args.scores),
+            score_manifest=Path(
+                args.score_manifest
+            ),
+            summary=Path(args.summary),
+            cohort=Path(args.cohort),
+            cohort_manifest=Path(
+                args.cohort_manifest
+            ),
+            diagnostics=Path(args.diagnostics),
+            training_reference_ids=Path(
+                args.training_reference_ids
+            ),
+            output=Path(args.output),
+        )
+    )
+
+    print(
+        f"Serialized {result.triple_count} cohort provenance "
+        f"triples to {result.output}"
+    )
+    print(
+        f"Selected test scenarios: "
+        f"{result.selected_scenario_count}"
+    )
+    print(
+        f"Training references: "
+        f"{result.selected_reference_count}"
+    )
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Local GENCO Evidence Graph CLI")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -1066,6 +1133,174 @@ def build_parser() -> argparse.ArgumentParser:
     training_metadata.add_argument("--run-relative-path", required=True)
     training_metadata.add_argument("--output-run-path", required=True)
     training_metadata.set_defaults(handler=_prepare_training_metadata)
+
+    scoring = subparsers.add_parser(
+        "score-scenarios",
+        help=(
+            "Score test scenarios by nearest training-reference "
+            "distance and physical residual"
+        ),
+    )
+    scoring.add_argument(
+        "--target-keyed-embeddings",
+        required=True,
+    )
+    scoring.add_argument(
+        "--reference-keyed-embeddings",
+        required=True,
+    )
+    scoring.add_argument(
+        "--prediction-parquet",
+        required=True,
+    )
+    scoring.add_argument(
+        "--test-split",
+        required=True,
+    )
+    scoring.add_argument(
+        "--train-split",
+        required=True,
+    )
+    scoring.add_argument(
+        "--target-run-manifest",
+        required=True,
+    )
+    scoring.add_argument(
+        "--reference-run-manifest",
+        required=True,
+    )
+    scoring.add_argument(
+        "--device",
+        choices=("auto", "cpu", "mps", "cuda"),
+        default="auto",
+    )
+    scoring.add_argument(
+        "--query-block-size",
+        type=int,
+        default=256,
+    )
+    scoring.add_argument(
+        "--reference-block-size",
+        type=int,
+        default=8192,
+    )
+    scoring.add_argument(
+        "--output",
+        required=True,
+    )
+    scoring.add_argument(
+        "--manifest-output",
+        required=True,
+    )
+    scoring.set_defaults(
+        handler=_score_scenarios
+    )
+
+    score_summary = subparsers.add_parser(
+        "summarize-scores",
+        help=(
+            "Summarize verified scenario distance and "
+            "residual distributions"
+        ),
+    )
+    score_summary.add_argument(
+        "--scores",
+        required=True,
+    )
+    score_summary.add_argument(
+        "--score-manifest",
+        required=True,
+    )
+    score_summary.add_argument(
+        "--output",
+        required=True,
+    )
+    score_summary.set_defaults(
+        handler=_summarize_scores
+    )
+
+
+    cohort = subparsers.add_parser(
+        "select-cohort",
+        help=(
+            "Select and freeze a deterministic "
+            "contrasting scenario cohort"
+        ),
+    )
+    cohort.add_argument(
+        "--scores",
+        required=True,
+    )
+    cohort.add_argument(
+        "--score-manifest",
+        required=True,
+    )
+    cohort.add_argument(
+        "--summary",
+        required=True,
+    )
+    cohort.add_argument(
+        "--output",
+        required=True,
+    )
+    cohort.add_argument(
+        "--manifest-output",
+        required=True,
+    )
+    cohort.add_argument(
+        "--diagnostics-output",
+        required=True,
+    )
+    cohort.add_argument(
+        "--training-reference-ids-output",
+        required=True,
+    )
+    cohort.set_defaults(
+        handler=_select_cohort
+    )
+
+    cohort_provenance = subparsers.add_parser(
+        "build-cohort-provenance",
+        help=(
+            "Build verified RDF provenance for a frozen "
+            "contrasting scenario cohort"
+        ),
+    )
+    cohort_provenance.add_argument(
+        "--scores",
+        required=True,
+    )
+    cohort_provenance.add_argument(
+        "--score-manifest",
+        required=True,
+    )
+    cohort_provenance.add_argument(
+        "--summary",
+        required=True,
+    )
+    cohort_provenance.add_argument(
+        "--cohort",
+        required=True,
+    )
+    cohort_provenance.add_argument(
+        "--cohort-manifest",
+        required=True,
+    )
+    cohort_provenance.add_argument(
+        "--diagnostics",
+        required=True,
+    )
+    cohort_provenance.add_argument(
+        "--training-reference-ids",
+        required=True,
+    )
+    cohort_provenance.add_argument(
+        "--output",
+        required=True,
+    )
+    cohort_provenance.set_defaults(
+        handler=_build_cohort_provenance
+    )
 
     query = subparsers.add_parser("query", help="Run a SPARQL query against local Turtle")
     query.add_argument("--graph", required=True)

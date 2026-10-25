@@ -9,6 +9,7 @@ import torch
 from rdflib import BNode, Graph, Literal
 from rdflib.namespace import PROV, RDF
 import yaml
+import argparse
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
@@ -53,7 +54,10 @@ from genco_evidence_graph.cli import (
     main,
 )
 from genco_evidence_graph.contracts import MetricSemantics, PhysicalEvidence
-from genco_evidence_graph.embeddings import ReferenceIndex, pool_scenario_embeddings
+from genco_evidence_graph.embeddings import (
+    ReferenceIndex,
+    load_pooled_keyed_embeddings,
+    pool_scenario_embeddings,)
 from genco_evidence_graph.provenance import (
     canonical_json_hash,
     sha256_file,
@@ -935,10 +939,29 @@ def _write_keyed_embeddings(path, *, split="train", stage="final", step=None) ->
 def test_keyed_embedding_loader_enforces_final_train_semantics(tmp_path) -> None:
     path = tmp_path / "train.parquet"
     _write_keyed_embeddings(path)
-    scenario_ids, embeddings = _keyed_embedding_table(path, "train")
+    scenario_ids, embeddings = load_pooled_keyed_embeddings(path, "train")
     assert scenario_ids == ["1"]
     np.testing.assert_allclose(embeddings, [[2.0, 3.0, 5.0, 6.0]])
 
+def test_cli_embedding_loader_alias_matches_public_loader(
+    tmp_path,
+) -> None:
+    path = tmp_path / "train.parquet"
+    _write_keyed_embeddings(path)
+
+    public_ids, public_embeddings = (
+        load_pooled_keyed_embeddings(path, "train")
+    )
+    alias_ids, alias_embeddings = _keyed_embedding_table(
+        path,
+        "train",
+    )
+
+    assert alias_ids == public_ids
+    np.testing.assert_allclose(
+        alias_embeddings,
+        public_embeddings,
+    )
 
 @pytest.mark.parametrize(
     ("change", "message"),
@@ -952,7 +975,7 @@ def test_keyed_embedding_loader_rejects_wrong_semantics(tmp_path, change, messag
     path = tmp_path / "invalid.parquet"
     _write_keyed_embeddings(path, **change)
     with pytest.raises(ValueError, match=message):
-        _keyed_embedding_table(path, "train")
+        load_pooled_keyed_embeddings(path, "train")
 
 
 def test_keyed_embedding_loader_rejects_duplicate_entity_keys(tmp_path) -> None:
@@ -961,7 +984,7 @@ def test_keyed_embedding_loader_rejects_duplicate_entity_keys(tmp_path) -> None:
     table = pd.read_parquet(path)
     pd.concat([table.iloc[:1], table], ignore_index=True).to_parquet(path)
     with pytest.raises(ValueError, match="duplicate entity key"):
-        _keyed_embedding_table(path, "train")
+        load_pooled_keyed_embeddings(path, "train")
 
 
 def test_graphkit_embeddings_are_canonicalized_with_final_semantics(tmp_path) -> None:
@@ -987,7 +1010,7 @@ def test_graphkit_embeddings_are_canonicalized_with_final_semantics(tmp_path) ->
     assert set(table["embedding_stage"]) == {"final"}
     assert table["correction_step"].isna().all()
     assert set(table["dataset_split"]) == {"test"}
-    scenario_ids, embeddings = _keyed_embedding_table(path, "test")
+    scenario_ids, embeddings = load_pooled_keyed_embeddings(path, "test")
     assert scenario_ids == ["7"]
     np.testing.assert_allclose(embeddings, [[2.0, 3.0, 5.0, 6.0]])
 
@@ -1630,6 +1653,44 @@ def test_public_query_and_validation_apis_use_serialized_graph(tmp_path) -> None
     assert result.rows[0][1] == "1.5"
     validate_evidence(graph_path, "ontology/shapes.ttl")
 
+def test_required_typed_apis_remain_public() -> None:
+    import genco_evidence_graph as package
+
+    required = {
+        "run_baseline_inference",
+        "prepare_reference_prediction_splits",
+        "build_evidence",
+        "query_evidence",
+        "validate_evidence",
+    }
+
+    assert required.issubset(set(package.__all__))
+
+    for name in required:
+        assert callable(getattr(package, name))
+
+
+
+def test_existing_cli_commands_remain_registered() -> None:
+    parser = build_parser()
+    subparsers = next(
+        action
+        for action in parser._actions
+        if isinstance(
+            action,
+            argparse._SubParsersAction,
+        )
+    )
+
+    required = {
+        "run-baseline",
+        "prepare-reference-split",
+        "build-evidence",
+        "query",
+        "validate",
+    }
+
+    assert required.issubset(set(subparsers.choices))
 
 @pytest.mark.parametrize("invalid_value", [np.nan, np.inf, -np.inf])
 def test_keyed_baseline_rejects_non_finite_values(

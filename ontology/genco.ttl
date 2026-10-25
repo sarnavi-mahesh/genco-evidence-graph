@@ -20,9 +20,75 @@ genco:PredictionArtifact a rdfs:Class ; rdfs:subClassOf genco:Artifact .
 genco:EmbeddingArtifact a rdfs:Class ; rdfs:subClassOf genco:Artifact .
 genco:ReferenceEmbeddingArtifact a rdfs:Class ; rdfs:subClassOf genco:EmbeddingArtifact .
 genco:ProvenanceArtifact a rdfs:Class ; rdfs:subClassOf genco:Artifact .
+genco:ScenarioScoringRun a rdfs:Class ; rdfs:subClassOf prov:Activity .
+genco:ScoreSummarizationRun a rdfs:Class ; rdfs:subClassOf prov:Activity .
+genco:CohortSelectionRun a rdfs:Class ; rdfs:subClassOf prov:Activity .
+genco:ScenarioScoringInputArtifact a rdfs:Class ; rdfs:subClassOf genco:Artifact .
+genco:ScenarioScoreTable a rdfs:Class ; rdfs:subClassOf genco:Artifact .
+genco:ScenarioScoreManifest a rdfs:Class ; rdfs:subClassOf genco:Artifact .
+genco:ScoreDistributionSummary a rdfs:Class ; rdfs:subClassOf genco:Artifact .
+genco:ContrastingScenarioCohort a rdfs:Class ; rdfs:subClassOf genco:Artifact .
+genco:CohortManifest a rdfs:Class ; rdfs:subClassOf genco:Artifact .
+genco:CohortSelectionDiagnostics a rdfs:Class ; rdfs:subClassOf genco:Artifact .
+genco:TrainingReferenceIdSet a rdfs:Class ; rdfs:subClassOf genco:Artifact .
+genco:SelectedTestScenario a rdfs:Class ; rdfs:subClassOf genco:Scenario .
+genco:TrainingReferenceScenario a rdfs:Class ; rdfs:subClassOf genco:Scenario .
+genco:CohortMembership a rdfs:Class ; rdfs:subClassOf prov:Entity .
 genco:sha256 a rdfs:Property .
 genco:hasProvenanceArtifact a rdfs:Property .
 genco:hasEmbeddingArtifact a rdfs:Property .
+genco:artifactPath a rdfs:Property .
+genco:scoringPolicyId a rdfs:Property .
+genco:selectionPolicyId a rdfs:Property .
+genco:distanceMetric a rdfs:Property .
+genco:poolingMethod a rdfs:Property .
+genco:residualMetric a rdfs:Property .
+genco:numericDtype a rdfs:Property .
+genco:targetScenarioCount a rdfs:Property .
+genco:referenceScenarioCount a rdfs:Property .
+genco:entityEmbeddingDimension a rdfs:Property .
+genco:pooledEmbeddingDimension a rdfs:Property .
+genco:targetRunId a rdfs:Property .
+genco:referenceRunId a rdfs:Property .
+genco:scenarioCount a rdfs:Property .
+genco:assignedScenarioCount a rdfs:Property .
+genco:excludedScenarioCount a rdfs:Property .
+genco:quantileMethod a rdfs:Property .
+genco:percentileRankMethod a rdfs:Property .
+genco:spearmanDistanceVsMeanAbsolutePbe a rdfs:Property .
+genco:representativesPerGroup a rdfs:Property .
+genco:cornerRepresentativeCount a rdfs:Property .
+genco:innerBoundaryRepresentativeCount a rdfs:Property .
+genco:physicalDiversityRepresentativeCount a rdfs:Property .
+genco:cornerMetric a rdfs:Property .
+genco:boundaryMetric a rdfs:Property .
+genco:physicalDiversityPriority a rdfs:Property .
+genco:lowPercentileThreshold a rdfs:Property .
+genco:highPercentileThreshold a rdfs:Property .
+genco:lowDistanceMaximum a rdfs:Property .
+genco:highDistanceMinimum a rdfs:Property .
+genco:lowResidualMaximum a rdfs:Property .
+genco:highResidualMinimum a rdfs:Property .
+genco:familiarGoodCandidateCount a rdfs:Property .
+genco:familiarBadCandidateCount a rdfs:Property .
+genco:unfamiliarGoodCandidateCount a rdfs:Property .
+genco:unfamiliarBadCandidateCount a rdfs:Property .
+genco:hasCohortMembership a rdfs:Property .
+genco:selectedScenario a rdfs:Property .
+genco:nearestTrainingReference a rdfs:Property .
+genco:scenarioId a rdfs:Property .
+genco:cohortGroup a rdfs:Property .
+genco:selectionReason a rdfs:Property .
+genco:selectionRank a rdfs:Property .
+genco:nearestReferenceDistance a rdfs:Property .
+genco:meanAbsolutePbe a rdfs:Property .
+genco:maxAbsolutePbe a rdfs:Property .
+genco:maxPbeBus a rdfs:Property .
+genco:distancePercentile a rdfs:Property .
+genco:residualPercentile a rdfs:Property .
+genco:maxPbePercentile a rdfs:Property .
+genco:cornerScore a rdfs:Property .
+genco:boundaryScore a rdfs:Property .
 genco:datasetRevision a rdfs:Property .
 genco:corpusScenarioCount a rdfs:Property .
 genco:datasetSplit a rdfs:Property .

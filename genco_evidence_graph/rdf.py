@@ -40,6 +40,21 @@ def _add_literal(
     graph.add((subject, predicate, literal))
 
 
+def evidence_resource(kind: str, identifier: str) -> URIRef:
+    """Return a stable resource URI for an evidence graph."""
+    return _resource(kind, identifier)
+
+
+def add_evidence_literal(
+    graph: Graph,
+    subject: URIRef,
+    predicate: URIRef,
+    value: Any,
+) -> None:
+    """Add a consistently typed literal to an evidence graph."""
+    _add_literal(graph, subject, predicate, value)
+
+
 def _add_physical_evidence(
     graph: Graph,
     prediction: URIRef,

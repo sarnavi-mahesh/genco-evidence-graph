@@ -6,6 +6,8 @@ from pathlib import Path
 
 from rdflib import Graph
 
+from typing import TYPE_CHECKING
+
 from .cli import _build_evidence
 from .queries import (
     NAMED_QUERIES,
@@ -14,6 +16,20 @@ from .queries import (
 )
 from .validation import validate_evidence_graph
 
+if TYPE_CHECKING:
+    from .scenario_selection import (
+        ContrastingScenarioSelectionResult,
+        ContrastingScenarioSelectionSpec,
+        ProgressCallback,
+        ScenarioScoringResult,
+        ScenarioScoringSpec,
+        ScoreSummaryResult,
+        ScoreSummarySpec,
+    )
+    from .scenario_selection_provenance import (
+        CohortProvenanceResult,
+        CohortProvenanceSpec,
+    )
 
 @dataclass(frozen=True)
 class EvidenceBuildSpec:
@@ -114,3 +130,48 @@ def validate_evidence(
         parsed = Graph()
         parsed.parse(graph, format="turtle")
     validate_evidence_graph(parsed, shapes_path)
+
+
+def generate_scenario_scores(
+    spec: "ScenarioScoringSpec",
+    *,
+    progress: "ProgressCallback | None" = None,
+) -> "ScenarioScoringResult":
+    """Generate verified scenario distance and residual scores."""
+    from .scenario_selection import score_scenarios
+
+    return score_scenarios(
+        spec,
+        progress=progress,
+    )
+
+def inspect_score_distributions(
+    spec: "ScoreSummarySpec",
+) -> "ScoreSummaryResult":
+    """Summarize verified scenario-score distributions."""
+    from .scenario_selection import (
+        summarize_score_distributions,
+    )
+
+    return summarize_score_distributions(spec)
+
+def freeze_contrasting_cohort(
+    spec: "ContrastingScenarioSelectionSpec",
+) -> "ContrastingScenarioSelectionResult":
+    """Select and hash-bind a contrasting scenario cohort."""
+    from .scenario_selection import (
+        select_contrasting_scenarios,
+    )
+
+    return select_contrasting_scenarios(spec)
+
+
+def build_cohort_provenance(
+    spec: "CohortProvenanceSpec",
+) -> "CohortProvenanceResult":
+    """Build verified RDF provenance for a frozen cohort."""
+    from .scenario_selection_provenance import (
+        write_cohort_provenance,
+    )
+
+    return write_cohort_provenance(spec)

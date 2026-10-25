@@ -40,7 +40,13 @@ def test_case14_build_evidence_from_supplied_79_file_metadata(tmp_path) -> None:
     original_root = REPO_ROOT / "artifacts/original_upstream_training_metadata"
     manifest_path = normalized_run / "upstream_source_manifest.json"
 
+    frozen_graph = (
+            REPO_ROOT
+            / "artifacts/case14_scenario_215429_evidence.ttl"
+    )
+
     required_paths = [
+        frozen_graph,
         manifest_path,
         original_root / ".cache/huggingface",
         REPO_ROOT / "artifacts/case14_seed42_test_embeddings/run_manifest.json",
@@ -94,6 +100,7 @@ def test_case14_build_evidence_from_supplied_79_file_metadata(tmp_path) -> None:
 
     assert main(build_args) == 0
     assert output_graph.is_file()
+    assert output_graph.read_bytes() == frozen_graph.read_bytes()
 
     assert main([
         "validate",

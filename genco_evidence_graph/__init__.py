@@ -33,7 +33,11 @@ from .provenance import sha256_file, sha256_path, stable_uri
 from .api import (
     EvidenceBuildSpec,
     QueryResult,
+    build_cohort_provenance,
     build_evidence,
+    freeze_contrasting_cohort,
+    generate_scenario_scores,
+    inspect_score_distributions,
     query_evidence,
     validate_evidence,
 )
@@ -65,6 +69,7 @@ __all__ = [
     "VerifiedRunManifest",
     "EvidenceBuildSpec",
     "QueryResult",
+    "build_cohort_provenance",
     "build_evidence",
     "build_evidence_graph",
     "query_evidence",
@@ -85,4 +90,7 @@ __all__ = [
     "load_training_metadata_manifest",
     "prepare_normalized_training_metadata",
     "verify_normalized_upstream_metadata",
+    "generate_scenario_scores",
+    "inspect_score_distributions",
+    "freeze_contrasting_cohort",
 ]

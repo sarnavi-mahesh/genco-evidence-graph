@@ -1,0 +1,572 @@
+@prefix genco: <https://genco.example/ontology#> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+genco:CohortArtifactShape a sh:NodeShape ;
+    sh:targetClass genco:ScenarioScoringInputArtifact,
+        genco:ScenarioScoreTable,
+        genco:ScenarioScoreManifest,
+        genco:ScoreDistributionSummary,
+        genco:ContrastingScenarioCohort,
+        genco:CohortManifest,
+        genco:CohortSelectionDiagnostics,
+        genco:TrainingReferenceIdSet ;
+    sh:property [
+        sh:path genco:artifactPath ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string
+    ] ;
+    sh:property [
+        sh:path genco:sha256 ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:pattern "^[0-9a-f]{64}$"
+    ] .
+
+genco:ScenarioScoringRunShape a sh:NodeShape ;
+    sh:targetClass genco:ScenarioScoringRun ;
+    sh:class prov:Activity ;
+    sh:property [
+        sh:path prov:used ;
+        sh:qualifiedValueShape [ sh:class genco:ScenarioScoringInputArtifact ] ;
+        sh:qualifiedMinCount 7 ;
+        sh:qualifiedMaxCount 7
+    ] ;
+    sh:property [
+        sh:path [ sh:inversePath prov:wasGeneratedBy ] ;
+        sh:qualifiedValueShape [ sh:class genco:ScenarioScoreTable ] ;
+        sh:qualifiedMinCount 1 ;
+        sh:qualifiedMaxCount 1
+    ] ;
+    sh:property [
+        sh:path [ sh:inversePath prov:wasGeneratedBy ] ;
+        sh:qualifiedValueShape [ sh:class genco:ScenarioScoreManifest ] ;
+        sh:qualifiedMinCount 1 ;
+        sh:qualifiedMaxCount 1
+    ] ;
+    sh:property [
+        sh:path genco:scoringPolicyId ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string
+    ] ;
+    sh:property [
+        sh:path genco:checkpointHash ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:pattern "^[0-9a-f]{64}$"
+    ] ;
+    sh:property [
+        sh:path genco:datasetRevision ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:pattern "^[0-9a-f]{40}$"
+    ] ;
+    sh:property [
+        sh:path genco:graphkitCommit ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:pattern "^[0-9a-f]{40}$"
+    ] ;
+    sh:property [
+        sh:path genco:targetRunId ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string
+    ] ;
+    sh:property [
+        sh:path genco:referenceRunId ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string
+    ] ;
+    sh:property [
+        sh:path genco:distanceMetric ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:hasValue "euclidean"
+    ] ;
+    sh:property [
+        sh:path genco:poolingMethod ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string
+    ] ;
+    sh:property [
+        sh:path genco:residualMetric ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string
+    ] ;
+    sh:property [
+        sh:path genco:numericDtype ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string
+    ] ;
+    sh:property [
+        sh:path genco:targetScenarioCount ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1
+    ] ;
+    sh:property [
+        sh:path genco:referenceScenarioCount ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1
+    ] ;
+    sh:property [
+        sh:path genco:entityEmbeddingDimension ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1
+    ] ;
+    sh:property [
+        sh:path genco:pooledEmbeddingDimension ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1
+    ] .
+
+genco:ScoreSummarizationRunShape a sh:NodeShape ;
+    sh:targetClass genco:ScoreSummarizationRun ;
+    sh:class prov:Activity ;
+    sh:property [
+        sh:path prov:used ;
+        sh:qualifiedValueShape [ sh:class genco:ScenarioScoreTable ] ;
+        sh:qualifiedMinCount 1 ;
+        sh:qualifiedMaxCount 1
+    ] ;
+    sh:property [
+        sh:path prov:used ;
+        sh:qualifiedValueShape [ sh:class genco:ScenarioScoreManifest ] ;
+        sh:qualifiedMinCount 1 ;
+        sh:qualifiedMaxCount 1
+    ] ;
+    sh:property [
+        sh:path [ sh:inversePath prov:wasGeneratedBy ] ;
+        sh:qualifiedValueShape [ sh:class genco:ScoreDistributionSummary ] ;
+        sh:qualifiedMinCount 1 ;
+        sh:qualifiedMaxCount 1
+    ] ;
+    sh:property [
+        sh:path genco:scoringPolicyId ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string
+    ] ;
+    sh:property [
+        sh:path genco:scenarioCount ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1
+    ] ;
+    sh:property [
+        sh:path genco:assignedScenarioCount ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 0
+    ] ;
+    sh:property [
+        sh:path genco:excludedScenarioCount ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 0
+    ] ;
+    sh:property [
+        sh:path genco:quantileMethod ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string
+    ] ;
+    sh:property [
+        sh:path genco:percentileRankMethod ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:hasValue "average"
+    ] ;
+    sh:property [
+        sh:path genco:spearmanDistanceVsMeanAbsolutePbe ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:double ;
+        sh:minInclusive -1 ;
+        sh:maxInclusive 1
+    ] .
+
+genco:CohortSelectionRunShape a sh:NodeShape ;
+    sh:targetClass genco:CohortSelectionRun ;
+    sh:class prov:Activity ;
+    sh:property [
+        sh:path prov:used ;
+        sh:qualifiedValueShape [ sh:class genco:ScenarioScoreTable ] ;
+        sh:qualifiedMinCount 1 ;
+        sh:qualifiedMaxCount 1
+    ] ;
+    sh:property [
+        sh:path prov:used ;
+        sh:qualifiedValueShape [ sh:class genco:ScenarioScoreManifest ] ;
+        sh:qualifiedMinCount 1 ;
+        sh:qualifiedMaxCount 1
+    ] ;
+    sh:property [
+        sh:path prov:used ;
+        sh:qualifiedValueShape [ sh:class genco:ScoreDistributionSummary ] ;
+        sh:qualifiedMinCount 1 ;
+        sh:qualifiedMaxCount 1
+    ] ;
+    sh:property [
+        sh:path [ sh:inversePath prov:wasGeneratedBy ] ;
+        sh:qualifiedValueShape [ sh:class genco:ContrastingScenarioCohort ] ;
+        sh:qualifiedMinCount 1 ;
+        sh:qualifiedMaxCount 1
+    ] ;
+    sh:property [
+        sh:path [ sh:inversePath prov:wasGeneratedBy ] ;
+        sh:qualifiedValueShape [ sh:class genco:CohortManifest ] ;
+        sh:qualifiedMinCount 1 ;
+        sh:qualifiedMaxCount 1
+    ] ;
+    sh:property [
+        sh:path [ sh:inversePath prov:wasGeneratedBy ] ;
+        sh:qualifiedValueShape [ sh:class genco:CohortSelectionDiagnostics ] ;
+        sh:qualifiedMinCount 1 ;
+        sh:qualifiedMaxCount 1
+    ] ;
+    sh:property [
+        sh:path [ sh:inversePath prov:wasGeneratedBy ] ;
+        sh:qualifiedValueShape [ sh:class genco:TrainingReferenceIdSet ] ;
+        sh:qualifiedMinCount 1 ;
+        sh:qualifiedMaxCount 1
+    ] ;
+    sh:property [
+        sh:path genco:selectionPolicyId ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string
+    ] ;
+    sh:property [
+        sh:path genco:representativesPerGroup ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:hasValue 5
+    ] ;
+    sh:property [
+        sh:path genco:cornerRepresentativeCount ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:hasValue 3
+    ] ;
+    sh:property [
+        sh:path genco:innerBoundaryRepresentativeCount ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:hasValue 1
+    ] ;
+    sh:property [
+        sh:path genco:physicalDiversityRepresentativeCount ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:hasValue 1
+    ] ;
+    sh:property [
+        sh:path genco:cornerMetric ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:hasValue "euclidean_percentile_corner_distance"
+    ] ;
+    sh:property [
+        sh:path genco:boundaryMetric ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:hasValue "euclidean_percentile_inner_boundary_distance"
+    ] ;
+    sh:property [
+        sh:path genco:physicalDiversityPriority ;
+        sh:minCount 5 ;
+        sh:maxCount 5 ;
+        sh:datatype xsd:string
+    ] ;
+    sh:property [
+        sh:path genco:lowPercentileThreshold ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:double ;
+        sh:minInclusive 0.25 ;
+        sh:maxInclusive 0.25
+    ] ;
+    sh:property [
+        sh:path genco:highPercentileThreshold ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:double ;
+        sh:minInclusive 0.75 ;
+        sh:maxInclusive 0.75
+    ] ;
+    sh:property [
+        sh:path genco:familiarGoodCandidateCount ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 5
+    ] ;
+    sh:property [
+        sh:path genco:familiarBadCandidateCount ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 5
+    ] ;
+    sh:property [
+        sh:path genco:unfamiliarGoodCandidateCount ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 5
+    ] ;
+    sh:property [
+        sh:path genco:unfamiliarBadCandidateCount ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 5
+    ] .
+
+genco:ContrastingScenarioCohortShape a sh:NodeShape ;
+    sh:targetClass genco:ContrastingScenarioCohort ;
+    sh:class prov:Entity ;
+    sh:property [
+        sh:path genco:hasCohortMembership ;
+        sh:minCount 20 ;
+        sh:maxCount 20 ;
+        sh:class genco:CohortMembership
+    ] ;
+    sh:property [
+        sh:path prov:hadMember ;
+        sh:minCount 20 ;
+        sh:maxCount 20 ;
+        sh:class genco:SelectedTestScenario
+    ] ;
+    sh:sparql [
+        sh:message "Each cohort group must contain exactly five memberships." ;
+        sh:select """
+            PREFIX genco: <https://genco.example/ontology#>
+            SELECT $this WHERE {
+              {
+                SELECT $this ?group (COUNT(?membership) AS ?count)
+                WHERE {
+                  $this genco:hasCohortMembership ?membership .
+                  ?membership genco:cohortGroup ?group .
+                }
+                GROUP BY $this ?group
+              }
+              FILTER(?count != 5)
+            }
+        """
+    ] ;
+    sh:sparql [
+        sh:message "A cohort cannot select the same scenario more than once." ;
+        sh:select """
+            PREFIX genco: <https://genco.example/ontology#>
+            SELECT $this WHERE {
+              $this genco:hasCohortMembership ?left, ?right .
+              ?left genco:selectedScenario ?scenario .
+              ?right genco:selectedScenario ?scenario .
+              FILTER(?left != ?right)
+            }
+        """
+    ] ;
+    sh:sparql [
+        sh:message "Selection ranks must be unique within each cohort group." ;
+        sh:select """
+            PREFIX genco: <https://genco.example/ontology#>
+            SELECT $this WHERE {
+              $this genco:hasCohortMembership ?left, ?right .
+              ?left genco:cohortGroup ?group ;
+                    genco:selectionRank ?rank .
+              ?right genco:cohortGroup ?group ;
+                     genco:selectionRank ?rank .
+              FILTER(?left != ?right)
+            }
+        """
+    ] .
+
+genco:CohortMembershipShape a sh:NodeShape ;
+    sh:targetClass genco:CohortMembership ;
+    sh:class prov:Entity ;
+    sh:property [
+        sh:path prov:wasGeneratedBy ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:class genco:CohortSelectionRun
+    ] ;
+    sh:property [
+        sh:path genco:selectedScenario ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:class genco:SelectedTestScenario
+    ] ;
+    sh:property [
+        sh:path genco:nearestTrainingReference ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:class genco:TrainingReferenceScenario
+    ] ;
+    sh:property [
+        sh:path genco:cohortGroup ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:in (
+            "familiar_good"
+            "familiar_bad"
+            "unfamiliar_good"
+            "unfamiliar_bad"
+        )
+    ] ;
+    sh:property [
+        sh:path genco:selectionReason ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:in ( "corner" "inner_boundary" "physical_diversity" )
+    ] ;
+    sh:property [
+        sh:path genco:selectionRank ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 5
+    ] ;
+    sh:property [
+        sh:path genco:maxPbeBus ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 0
+    ] ;
+    sh:property [
+        sh:path genco:nearestReferenceDistance ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:double ;
+        sh:minInclusive 0
+    ] ;
+    sh:property [
+        sh:path genco:meanAbsolutePbe ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:double ;
+        sh:minInclusive 0
+    ] ;
+    sh:property [
+        sh:path genco:maxAbsolutePbe ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:double ;
+        sh:minInclusive 0
+    ] ;
+    sh:property [
+        sh:path genco:distancePercentile ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:double ;
+        sh:minExclusive 0 ;
+        sh:maxInclusive 1
+    ] ;
+    sh:property [
+        sh:path genco:residualPercentile ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:double ;
+        sh:minExclusive 0 ;
+        sh:maxInclusive 1
+    ] ;
+    sh:property [
+        sh:path genco:maxPbePercentile ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:double ;
+        sh:minExclusive 0 ;
+        sh:maxInclusive 1
+    ] ;
+    sh:property [
+        sh:path genco:cornerScore ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:double ;
+        sh:minInclusive 0
+    ] ;
+    sh:property [
+        sh:path genco:boundaryScore ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:double ;
+        sh:minInclusive 0
+    ] ;
+    sh:sparql [
+        sh:message "Selection reason must agree with selection rank." ;
+        sh:select """
+            PREFIX genco: <https://genco.example/ontology#>
+            SELECT $this WHERE {
+              $this genco:selectionRank ?rank ;
+                    genco:selectionReason ?reason .
+              FILTER(
+                (?rank <= 3 && ?reason != "corner") ||
+                (?rank = 4 && ?reason != "inner_boundary") ||
+                (?rank = 5 && ?reason != "physical_diversity")
+              )
+            }
+        """
+    ] .
+
+genco:SelectedTestScenarioShape a sh:NodeShape ;
+    sh:targetClass genco:SelectedTestScenario ;
+    sh:property [
+        sh:path genco:scenarioId ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:pattern "^[0-9]+$"
+    ] ;
+    sh:property [
+        sh:path genco:datasetSplit ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:hasValue "test"
+    ] .
+
+genco:TrainingReferenceScenarioShape a sh:NodeShape ;
+    sh:targetClass genco:TrainingReferenceScenario ;
+    sh:property [
+        sh:path genco:scenarioId ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:pattern "^[0-9]+$"
+    ] ;
+    sh:property [
+        sh:path genco:datasetSplit ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:hasValue "train"
+    ] .
