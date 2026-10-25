@@ -1,0 +1,16 @@
+format_version: 1
+policy_id: genco-trajectory-capture-equivalence-v1
+absolute_tolerances:
+  bus:
+    Vm_pred: 2.0e-06
+    Va_pred: 2.0e-06
+    Pg_pred: 0.0025
+    Qg_pred: 0.0025
+    active res. (MW): 0.0025
+    reactive res. (MVar): 0.0025
+    PBE: 0.0025
+  generator:
+    p_mw_pred: 0.0025
+  final_embedding: 0.0005
+rationale: Bounds define accepted keyed row-level numerical variation between the
+  uninstrumented cohort baseline and package-instrumented trajectory capture.

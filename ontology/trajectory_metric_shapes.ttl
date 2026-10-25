@@ -1,0 +1,82 @@
+@prefix genco: <https://genco.example/ontology#> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+genco:TrajectoryMetricArtifactShape a sh:NodeShape ;
+    sh:targetClass genco:EntityTrajectoryMetricTable,
+        genco:StepTrajectoryMetricTable,
+        genco:ScenarioTrajectorySummary,
+        genco:CohortGroupTrajectoryComparison,
+        genco:TrajectoryMetricDiagnostics,
+        genco:TrajectoryMetricManifest ;
+    sh:class prov:Entity ;
+    sh:property [
+        sh:path genco:artifactPath ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string
+    ] ;
+    sh:property [
+        sh:path genco:sha256 ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:pattern "^[0-9a-f]{64}$"
+    ] .
+
+genco:TrajectoryMetricComputationShape a sh:NodeShape ;
+    sh:targetClass genco:TrajectoryMetricComputation ;
+    sh:class prov:Activity ;
+    sh:property [
+        sh:path prov:used ;
+        sh:minCount 4 ;
+        sh:maxCount 4 ;
+        sh:class prov:Entity
+    ] ;
+    sh:property [
+        sh:path [ sh:inversePath prov:wasGeneratedBy ] ;
+        sh:minCount 6 ;
+        sh:maxCount 6 ;
+        sh:class prov:Entity
+    ] ;
+    sh:property [
+        sh:path genco:metricPolicyId ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:hasValue "genco-latent-trajectory-metrics-v1"
+    ] ;
+    sh:property [
+        sh:path genco:entityCount ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:hasValue 365
+    ] ;
+    sh:property [
+        sh:path genco:stepTransitionCount ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:hasValue 4015
+    ] ;
+    sh:property [
+        sh:path genco:scenarioCount ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:hasValue 20
+    ] ;
+    sh:property [
+        sh:path genco:distanceMetric ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:hasValue "euclidean_l2"
+    ] ;
+    sh:property [
+        sh:path genco:localDirectionMetric ;
+        sh:minCount 1 ;
+        sh:maxCount 1
+    ] ;
+    sh:property [
+        sh:path genco:globalDirectionMetric ;
+        sh:minCount 1 ;
+        sh:maxCount 1
+    ] .

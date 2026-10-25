@@ -42,6 +42,9 @@ class BaselineInferenceSpec:
     reuse_verified_run: bool = False
     dataset_split: str = "test"
     export_embeddings: bool = True
+    plugin_modules: tuple[str, ...] = ()
+    plugin_python_path: Path | None = None
+    plugin_source_paths: tuple[Path, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -1059,6 +1062,46 @@ def run_baseline_inference(spec: BaselineInferenceSpec) -> BaselineInferenceResu
     normalizer_path = spec.normalizer.resolve()
     data_path = spec.data_path.resolve()
     split_path = spec.split_artifact.resolve()
+    if spec.plugin_modules and spec.plugin_python_path is None:
+        raise ValueError(
+            "Graphkit plugins require a plugin_python_path"
+        )
+    if spec.plugin_source_paths and not spec.plugin_modules:
+        raise ValueError(
+            "Plugin source paths require at least one plugin module"
+        )
+    plugin_python_path = (
+        spec.plugin_python_path.resolve()
+        if spec.plugin_python_path is not None
+        else None
+    )
+    if (
+        plugin_python_path is not None
+        and not plugin_python_path.is_dir()
+    ):
+        raise FileNotFoundError(
+            "Plugin Python path does not exist: "
+            f"{plugin_python_path}"
+        )
+    plugin_source_paths = tuple(
+        path.resolve()
+        for path in spec.plugin_source_paths
+    )
+    for source_path in plugin_source_paths:
+        if not source_path.is_file():
+            raise FileNotFoundError(
+                f"Plugin source does not exist: {source_path}"
+            )
+        if plugin_python_path is not None:
+            try:
+                source_path.relative_to(
+                    plugin_python_path
+                )
+            except ValueError as error:
+                raise ValueError(
+                    "Plugin source must be inside "
+                    f"plugin_python_path: {source_path}"
+                ) from error
     manifest_path = output_dir / "run_manifest.json"
     if spec.reuse_verified_run:
         if not spec.export_embeddings:
@@ -1141,8 +1184,28 @@ def run_baseline_inference(spec: BaselineInferenceSpec) -> BaselineInferenceResu
     ]
     if spec.export_embeddings:
         command.append("--get_embeddings")
+    if spec.plugin_modules:
+        command.extend(
+            [
+                "--plugins",
+                *spec.plugin_modules,
+            ]
+        )
     environment = os.environ.copy()
     environment["MLFLOW_ALLOW_FILE_STORE"] = "true"
+    if plugin_python_path is not None:
+        existing_python_path = environment.get(
+            "PYTHONPATH"
+        )
+        environment["PYTHONPATH"] = (
+            str(plugin_python_path)
+            if not existing_python_path
+            else (
+                f"{plugin_python_path}"
+                f"{os.pathsep}"
+                f"{existing_python_path}"
+            )
+        )
     subprocess.run(
         command,
         check=True,
@@ -1214,16 +1277,36 @@ def run_baseline_inference(spec: BaselineInferenceSpec) -> BaselineInferenceResu
     )
     if spec.export_embeddings:
         _compact_native_embedding_artifacts(output_dir)
+    copied_plugin_sources = []
+    for source_path in plugin_source_paths:
+        relative = source_path.relative_to(
+            plugin_python_path
+        )
+        copied = (
+            output_dir
+            / "plugin_sources"
+            / relative
+        )
+        copied.parent.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+        shutil.copy2(source_path, copied)
+        if sha256_file(source_path) != sha256_file(copied):
+            raise ValueError(
+                "Copied plugin source hash disagrees: "
+                f"{source_path} -> {copied}"
+            )
+        copied_plugin_sources.append(copied)
+
     artifact_paths = [
-        output_dir / "case14_ieee_predictions.parquet",
-        output_dir / "case14_ieee_gen_predictions.parquet",
+        *output_dir.glob("*.parquet"),
         effective_config_path,
         runtime_environment_path,
         output_dir / "graphkit-requirements.lock",
         output_dir / "graphkit-source.txt",
+        *copied_plugin_sources,
     ]
-    if spec.export_embeddings:
-        artifact_paths.append(keyed_path)
     artifact_paths = sorted(artifact_paths)
     manifest = {
         "format_version": 1,
@@ -1238,6 +1321,9 @@ def run_baseline_inference(spec: BaselineInferenceSpec) -> BaselineInferenceResu
         "task": run.task,
         "dataset_split": spec.dataset_split,
         "export_embeddings": spec.export_embeddings,
+        "plugin_modules": list(
+            spec.plugin_modules
+        ),
         "native_embeddings_compacted": spec.export_embeddings,
         "embedding_dimension": embedding_dimension,
         "corpus_scenario_count": run.corpus_scenario_count,

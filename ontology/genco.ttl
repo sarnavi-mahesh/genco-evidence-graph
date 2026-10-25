@@ -34,6 +34,20 @@ genco:TrainingReferenceIdSet a rdfs:Class ; rdfs:subClassOf genco:Artifact .
 genco:SelectedTestScenario a rdfs:Class ; rdfs:subClassOf genco:Scenario .
 genco:TrainingReferenceScenario a rdfs:Class ; rdfs:subClassOf genco:Scenario .
 genco:CohortMembership a rdfs:Class ; rdfs:subClassOf prov:Entity .
+genco:TrajectoryCaptureRun a rdfs:Class ; rdfs:subClassOf prov:Activity .
+genco:LatentTrajectoryArtifact a rdfs:Class ; rdfs:subClassOf genco:Artifact .
+genco:TrajectoryCaptureManifest a rdfs:Class ; rdfs:subClassOf genco:Artifact .
+genco:BaselineRunManifest a rdfs:Class ; rdfs:subClassOf genco:Artifact .
+genco:InstrumentedRunManifest a rdfs:Class ; rdfs:subClassOf genco:Artifact .
+genco:CohortInferenceSplit a rdfs:Class ; rdfs:subClassOf genco:Artifact .
+genco:EquivalenceTolerancePolicy a rdfs:Class ; rdfs:subClassOf genco:Artifact .
+genco:TrajectoryMetricComputation a rdfs:Class ; rdfs:subClassOf prov:Activity .
+genco:EntityTrajectoryMetricTable a rdfs:Class ; rdfs:subClassOf genco:Artifact .
+genco:StepTrajectoryMetricTable a rdfs:Class ; rdfs:subClassOf genco:Artifact .
+genco:ScenarioTrajectorySummary a rdfs:Class ; rdfs:subClassOf genco:Artifact .
+genco:CohortGroupTrajectoryComparison a rdfs:Class ; rdfs:subClassOf genco:Artifact .
+genco:TrajectoryMetricDiagnostics a rdfs:Class ; rdfs:subClassOf genco:Artifact .
+genco:TrajectoryMetricManifest a rdfs:Class ; rdfs:subClassOf genco:Artifact .
 genco:sha256 a rdfs:Property .
 genco:hasProvenanceArtifact a rdfs:Property .
 genco:hasEmbeddingArtifact a rdfs:Property .
@@ -76,6 +90,16 @@ genco:unfamiliarBadCandidateCount a rdfs:Property .
 genco:hasCohortMembership a rdfs:Property .
 genco:selectedScenario a rdfs:Property .
 genco:nearestTrainingReference a rdfs:Property .
+genco:entityCount a rdfs:Property .
+genco:trajectoryRowCount a rdfs:Property .
+genco:correctionStepCount a rdfs:Property .
+genco:embeddingStage a rdfs:Property .
+genco:maximumEmbeddingDifference a rdfs:Property .
+genco:finalSnapshotExact a rdfs:Property .
+genco:metricPolicyId a rdfs:Property .
+genco:stepTransitionCount a rdfs:Property .
+genco:localDirectionMetric a rdfs:Property .
+genco:globalDirectionMetric a rdfs:Property .
 genco:scenarioId a rdfs:Property .
 genco:cohortGroup a rdfs:Property .
 genco:selectionReason a rdfs:Property .

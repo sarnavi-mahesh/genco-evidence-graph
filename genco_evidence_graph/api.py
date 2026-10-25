@@ -30,6 +30,24 @@ if TYPE_CHECKING:
         CohortProvenanceResult,
         CohortProvenanceSpec,
     )
+    from .trajectory_capture import (
+        CohortInferenceSplitResult,
+        CohortInferenceSplitSpec,
+        TrajectoryCaptureResult,
+        TrajectoryCaptureSpec,
+    )
+    from .trajectory_provenance import (
+        TrajectoryProvenanceResult,
+        TrajectoryProvenanceSpec,
+    )
+    from .trajectory_metrics import (
+        TrajectoryMetricResult,
+        TrajectoryMetricSpec,
+    )
+    from .trajectory_metric_provenance import (
+        TrajectoryMetricProvenanceResult,
+        TrajectoryMetricProvenanceSpec,
+    )
 
 @dataclass(frozen=True)
 class EvidenceBuildSpec:
@@ -175,3 +193,58 @@ def build_cohort_provenance(
     )
 
     return write_cohort_provenance(spec)
+
+
+def prepare_cohort_inference_splits(
+    spec: "CohortInferenceSplitSpec",
+) -> "CohortInferenceSplitResult":
+    """Create verified Graphkit splits for cohort-only inference."""
+    from .trajectory_capture import (
+        prepare_cohort_inference_splits as prepare,
+    )
+
+    return prepare(spec)
+
+
+def finalize_trajectory_capture(
+    spec: "TrajectoryCaptureSpec",
+) -> "TrajectoryCaptureResult":
+    """Canonicalize and verify a cohort trajectory capture."""
+    from .trajectory_capture import (
+        finalize_trajectory_capture as finalize,
+    )
+
+    return finalize(spec)
+
+
+def build_trajectory_provenance(
+    spec: "TrajectoryProvenanceSpec",
+) -> "TrajectoryProvenanceResult":
+    """Build verified RDF provenance for a trajectory capture."""
+    from .trajectory_provenance import (
+        write_trajectory_provenance,
+    )
+
+    return write_trajectory_provenance(spec)
+
+
+def compute_trajectory_metrics(
+    spec: "TrajectoryMetricSpec",
+) -> "TrajectoryMetricResult":
+    """Derive verified metrics from captured latent trajectories."""
+    from .trajectory_metrics import (
+        derive_trajectory_metrics,
+    )
+
+    return derive_trajectory_metrics(spec)
+
+
+def build_trajectory_metric_provenance(
+    spec: "TrajectoryMetricProvenanceSpec",
+) -> "TrajectoryMetricProvenanceResult":
+    """Build RDF provenance for derived trajectory metrics."""
+    from .trajectory_metric_provenance import (
+        write_trajectory_metric_provenance,
+    )
+
+    return write_trajectory_metric_provenance(spec)

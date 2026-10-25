@@ -1,0 +1,94 @@
+@prefix genco: <https://genco.example/ontology#> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+genco:TrajectoryArtifactShape a sh:NodeShape ;
+    sh:targetClass genco:LatentTrajectoryArtifact,
+        genco:TrajectoryCaptureManifest,
+        genco:BaselineRunManifest,
+        genco:InstrumentedRunManifest,
+        genco:CohortInferenceSplit,
+        genco:EquivalenceTolerancePolicy ;
+    sh:class prov:Entity ;
+    sh:property [
+        sh:path genco:artifactPath ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string
+    ] ;
+    sh:property [
+        sh:path genco:sha256 ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:pattern "^[0-9a-f]{64}$"
+    ] .
+
+genco:TrajectoryCaptureRunShape a sh:NodeShape ;
+    sh:targetClass genco:TrajectoryCaptureRun ;
+    sh:class prov:Activity ;
+    sh:property [
+        sh:path prov:used ;
+        sh:minCount 4 ;
+        sh:maxCount 4 ;
+        sh:class prov:Entity
+    ] ;
+    sh:property [
+        sh:path [ sh:inversePath prov:wasGeneratedBy ] ;
+        sh:minCount 2 ;
+        sh:maxCount 2 ;
+        sh:class prov:Entity
+    ] ;
+    sh:property [
+        sh:path genco:scenarioCount ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1
+    ] ;
+    sh:property [
+        sh:path genco:entityCount ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1
+    ] ;
+    sh:property [
+        sh:path genco:trajectoryRowCount ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1
+    ] ;
+    sh:property [
+        sh:path genco:correctionStepCount ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:hasValue 12
+    ] ;
+    sh:property [
+        sh:path genco:embeddingDimension ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:hasValue 384
+    ] ;
+    sh:property [
+        sh:path genco:embeddingStage ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:hasValue "prediction_head_input"
+    ] ;
+    sh:property [
+        sh:path genco:comparisonStatus ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:hasValue "passed"
+    ] ;
+    sh:property [
+        sh:path genco:finalSnapshotExact ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:boolean ;
+        sh:hasValue true
+    ] .

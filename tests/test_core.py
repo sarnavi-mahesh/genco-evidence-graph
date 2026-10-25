@@ -2150,6 +2150,36 @@ def test_run_baseline_reuse_flags(reuse_flag, expected) -> None:
     assert not hasattr(args, "resume")
 
 
+def test_run_baseline_plugin_arguments() -> None:
+    args = build_parser().parse_args(
+        [
+            "run-baseline",
+            "--graphkit-python", "/graphkit/.venv/bin/python",
+            "--graphkit-workdir", "/graphkit",
+            "--config", "config.yaml",
+            "--checkpoint", "checkpoint.pt",
+            "--normalizer", "normalizer.pt",
+            "--data-path", "data",
+            "--split-artifact", "test.pt",
+            "--output-dir", "output",
+            "--run-name", "test-run",
+            "--graphkit-requirements-lock", "requirements.lock",
+            "--graphkit-source-record", "source.txt",
+            "--plugin", "genco_graphkit_capture.plugin",
+            "--plugin-python-path", "/gencolens",
+            "--plugin-source", "genco_graphkit_capture/__init__.py",
+            "--plugin-source", "genco_graphkit_capture/plugin.py",
+        ]
+    )
+
+    assert args.plugin == ["genco_graphkit_capture.plugin"]
+    assert args.plugin_python_path == "/gencolens"
+    assert args.plugin_source == [
+        "genco_graphkit_capture/__init__.py",
+        "genco_graphkit_capture/plugin.py",
+    ]
+
+
 def test_selected_runtime_must_match_reused_run_manifest(
     tmp_path,
     monkeypatch,

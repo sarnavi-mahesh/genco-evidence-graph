@@ -721,6 +721,16 @@ def _run_baseline(args: argparse.Namespace) -> int:
             reuse_verified_run=args.reuse_verified_run,
             dataset_split=args.dataset_split,
             export_embeddings=not args.no_embeddings,
+            plugin_modules=tuple(args.plugin),
+            plugin_python_path=(
+                Path(args.plugin_python_path)
+                if args.plugin_python_path
+                else None
+            ),
+            plugin_source_paths=tuple(
+                Path(value)
+                for value in args.plugin_source
+            ),
         ),
     )
     print(f"Baseline run {result.run_id} completed")
@@ -996,6 +1006,199 @@ def _build_cohort_provenance(
     return 0
 
 
+def _prepare_cohort_inference_splits(
+    args: argparse.Namespace,
+) -> int:
+    from .trajectory_capture import (
+        CohortInferenceSplitSpec,
+        prepare_cohort_inference_splits,
+    )
+
+    result = prepare_cohort_inference_splits(
+        CohortInferenceSplitSpec(
+            train_split=Path(args.train_split),
+            validation_split=Path(
+                args.validation_split
+            ),
+            test_split=Path(args.test_split),
+            cohort=Path(args.cohort),
+            cohort_manifest=Path(
+                args.cohort_manifest
+            ),
+            output_dir=Path(args.output_dir),
+        )
+    )
+    print(
+        f"Prepared cohort-only inference for "
+        f"{result.selected_scenario_count} test scenarios"
+    )
+    print(f"Split directory: {result.output_dir}")
+    print(f"Manifest: {result.manifest}")
+    return 0
+
+
+def _finalize_trajectory_capture(
+    args: argparse.Namespace,
+) -> int:
+    from .trajectory_capture import (
+        TrajectoryCaptureSpec,
+        finalize_trajectory_capture,
+    )
+
+    result = finalize_trajectory_capture(
+        TrajectoryCaptureSpec(
+            baseline_dir=Path(args.baseline_dir),
+            instrumented_dir=Path(
+                args.instrumented_dir
+            ),
+            split_artifact=Path(
+                args.split_artifact
+            ),
+            tolerance_config=Path(
+                args.tolerance_config
+            ),
+            output=Path(args.output),
+            manifest_output=Path(
+                args.manifest_output
+            ),
+        )
+    )
+    print(
+        f"Wrote {result.row_count} trajectory rows "
+        f"for {result.scenario_count} scenarios"
+    )
+    print(f"Trajectory: {result.trajectory}")
+    print(f"Manifest: {result.manifest}")
+    return 0
+
+
+def _build_trajectory_provenance(
+    args: argparse.Namespace,
+) -> int:
+    from .trajectory_provenance import (
+        TrajectoryProvenanceSpec,
+        write_trajectory_provenance,
+    )
+
+    result = write_trajectory_provenance(
+        TrajectoryProvenanceSpec(
+            trajectory=Path(args.trajectory),
+            capture_manifest=Path(
+                args.capture_manifest
+            ),
+            baseline_run_manifest=Path(
+                args.baseline_run_manifest
+            ),
+            instrumented_run_manifest=Path(
+                args.instrumented_run_manifest
+            ),
+            split_artifact=Path(
+                args.split_artifact
+            ),
+            tolerance_config=Path(
+                args.tolerance_config
+            ),
+            output=Path(args.output),
+        )
+    )
+    print(
+        f"Serialized {result.triple_count} trajectory "
+        f"provenance triples to {result.output}"
+    )
+    return 0
+
+
+def _compute_trajectory_metrics(
+    args: argparse.Namespace,
+) -> int:
+    from .trajectory_metrics import (
+        TrajectoryMetricSpec,
+        derive_trajectory_metrics,
+    )
+
+    result = derive_trajectory_metrics(
+        TrajectoryMetricSpec(
+            trajectory=Path(args.trajectory),
+            trajectory_manifest=Path(
+                args.trajectory_manifest
+            ),
+            cohort=Path(args.cohort),
+            cohort_manifest=Path(
+                args.cohort_manifest
+            ),
+            entity_metrics_output=Path(
+                args.entity_metrics_output
+            ),
+            step_metrics_output=Path(
+                args.step_metrics_output
+            ),
+            scenario_summary_output=Path(
+                args.scenario_summary_output
+            ),
+            group_comparison_output=Path(
+                args.group_comparison_output
+            ),
+            diagnostics_output=Path(
+                args.diagnostics_output
+            ),
+            manifest_output=Path(
+                args.manifest_output
+            ),
+        )
+    )
+    print(
+        f"Computed metrics for {result.entity_count} entities "
+        f"and {result.step_transition_count} transitions"
+    )
+    print(f"Entity metrics: {result.entity_metrics}")
+    print(f"Scenario summaries: {result.scenario_summary}")
+    print(f"Group comparison: {result.group_comparison}")
+    print(f"Manifest: {result.manifest}")
+    return 0
+
+
+def _build_trajectory_metric_provenance(
+    args: argparse.Namespace,
+) -> int:
+    from .trajectory_metric_provenance import (
+        TrajectoryMetricProvenanceSpec,
+        write_trajectory_metric_provenance,
+    )
+
+    result = write_trajectory_metric_provenance(
+        TrajectoryMetricProvenanceSpec(
+            metric_manifest=Path(
+                args.metric_manifest
+            ),
+            trajectory=Path(args.trajectory),
+            trajectory_manifest=Path(
+                args.trajectory_manifest
+            ),
+            cohort=Path(args.cohort),
+            cohort_manifest=Path(
+                args.cohort_manifest
+            ),
+            entity_metrics=Path(
+                args.entity_metrics
+            ),
+            step_metrics=Path(args.step_metrics),
+            scenario_summary=Path(
+                args.scenario_summary
+            ),
+            group_comparison=Path(
+                args.group_comparison
+            ),
+            diagnostics=Path(args.diagnostics),
+            output=Path(args.output),
+        )
+    )
+    print(
+        f"Serialized {result.triple_count} trajectory metric "
+        f"provenance triples to {result.output}"
+    )
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Local GENCO Evidence Graph CLI")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -1066,6 +1269,25 @@ def build_parser() -> argparse.ArgumentParser:
         "--dataset-split",
         choices=("test", "train"),
         default="test",
+    )
+    baseline.add_argument(
+        "--plugin",
+        action="append",
+        default=[],
+        help="Graphkit plugin module to import; may be repeated.",
+    )
+    baseline.add_argument(
+        "--plugin-python-path",
+        help="Directory added to PYTHONPATH for Graphkit plugins.",
+    )
+    baseline.add_argument(
+        "--plugin-source",
+        action="append",
+        default=[],
+        help=(
+            "Plugin source file copied into the run artifacts; "
+            "may be repeated."
+        ),
     )
     baseline.add_argument(
         "--no-embeddings",
@@ -1300,6 +1522,221 @@ def build_parser() -> argparse.ArgumentParser:
     )
     cohort_provenance.set_defaults(
         handler=_build_cohort_provenance
+    )
+
+    cohort_splits = subparsers.add_parser(
+        "prepare-cohort-inference-splits",
+        help=(
+            "Create verified Graphkit splits for inference "
+            "on the frozen cohort only"
+        ),
+    )
+    cohort_splits.add_argument(
+        "--train-split",
+        required=True,
+    )
+    cohort_splits.add_argument(
+        "--validation-split",
+        required=True,
+    )
+    cohort_splits.add_argument(
+        "--test-split",
+        required=True,
+    )
+    cohort_splits.add_argument(
+        "--cohort",
+        required=True,
+    )
+    cohort_splits.add_argument(
+        "--cohort-manifest",
+        required=True,
+    )
+    cohort_splits.add_argument(
+        "--output-dir",
+        required=True,
+    )
+    cohort_splits.set_defaults(
+        handler=_prepare_cohort_inference_splits
+    )
+
+    trajectories = subparsers.add_parser(
+        "finalize-trajectory-capture",
+        help=(
+            "Canonicalize cohort trajectories and verify "
+            "instrumented inference equivalence"
+        ),
+    )
+    trajectories.add_argument(
+        "--baseline-dir",
+        required=True,
+    )
+    trajectories.add_argument(
+        "--instrumented-dir",
+        required=True,
+    )
+    trajectories.add_argument(
+        "--split-artifact",
+        required=True,
+    )
+    trajectories.add_argument(
+        "--tolerance-config",
+        required=True,
+    )
+    trajectories.add_argument(
+        "--output",
+        required=True,
+    )
+    trajectories.add_argument(
+        "--manifest-output",
+        required=True,
+    )
+    trajectories.set_defaults(
+        handler=_finalize_trajectory_capture
+    )
+
+    trajectory_provenance = subparsers.add_parser(
+        "build-trajectory-provenance",
+        help=(
+            "Build verified RDF provenance for cohort "
+            "latent trajectories"
+        ),
+    )
+    trajectory_provenance.add_argument(
+        "--trajectory",
+        required=True,
+    )
+    trajectory_provenance.add_argument(
+        "--capture-manifest",
+        required=True,
+    )
+    trajectory_provenance.add_argument(
+        "--baseline-run-manifest",
+        required=True,
+    )
+    trajectory_provenance.add_argument(
+        "--instrumented-run-manifest",
+        required=True,
+    )
+    trajectory_provenance.add_argument(
+        "--split-artifact",
+        required=True,
+    )
+    trajectory_provenance.add_argument(
+        "--tolerance-config",
+        required=True,
+    )
+    trajectory_provenance.add_argument(
+        "--output",
+        required=True,
+    )
+    trajectory_provenance.set_defaults(
+        handler=_build_trajectory_provenance
+    )
+
+    trajectory_metrics = subparsers.add_parser(
+        "compute-trajectory-metrics",
+        help=(
+            "Derive entity, transition, scenario, and group "
+            "metrics from verified latent trajectories"
+        ),
+    )
+    trajectory_metrics.add_argument(
+        "--trajectory",
+        required=True,
+    )
+    trajectory_metrics.add_argument(
+        "--trajectory-manifest",
+        required=True,
+    )
+    trajectory_metrics.add_argument(
+        "--cohort",
+        required=True,
+    )
+    trajectory_metrics.add_argument(
+        "--cohort-manifest",
+        required=True,
+    )
+    trajectory_metrics.add_argument(
+        "--entity-metrics-output",
+        required=True,
+    )
+    trajectory_metrics.add_argument(
+        "--step-metrics-output",
+        required=True,
+    )
+    trajectory_metrics.add_argument(
+        "--scenario-summary-output",
+        required=True,
+    )
+    trajectory_metrics.add_argument(
+        "--group-comparison-output",
+        required=True,
+    )
+    trajectory_metrics.add_argument(
+        "--diagnostics-output",
+        required=True,
+    )
+    trajectory_metrics.add_argument(
+        "--manifest-output",
+        required=True,
+    )
+    trajectory_metrics.set_defaults(
+        handler=_compute_trajectory_metrics
+    )
+
+    metric_provenance = subparsers.add_parser(
+        "build-trajectory-metric-provenance",
+        help=(
+            "Build verified RDF provenance for derived "
+            "trajectory metrics"
+        ),
+    )
+    metric_provenance.add_argument(
+        "--metric-manifest",
+        required=True,
+    )
+    metric_provenance.add_argument(
+        "--trajectory",
+        required=True,
+    )
+    metric_provenance.add_argument(
+        "--trajectory-manifest",
+        required=True,
+    )
+    metric_provenance.add_argument(
+        "--cohort",
+        required=True,
+    )
+    metric_provenance.add_argument(
+        "--cohort-manifest",
+        required=True,
+    )
+    metric_provenance.add_argument(
+        "--entity-metrics",
+        required=True,
+    )
+    metric_provenance.add_argument(
+        "--step-metrics",
+        required=True,
+    )
+    metric_provenance.add_argument(
+        "--scenario-summary",
+        required=True,
+    )
+    metric_provenance.add_argument(
+        "--group-comparison",
+        required=True,
+    )
+    metric_provenance.add_argument(
+        "--diagnostics",
+        required=True,
+    )
+    metric_provenance.add_argument(
+        "--output",
+        required=True,
+    )
+    metric_provenance.set_defaults(
+        handler=_build_trajectory_metric_provenance
     )
 
     query = subparsers.add_parser("query", help="Run a SPARQL query against local Turtle")

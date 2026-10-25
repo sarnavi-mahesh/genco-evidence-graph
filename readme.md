@@ -272,7 +272,7 @@ genco-evidence run-baseline \
   --data-path data \
   --split-artifact genco-opfdata/splits/test.pt \
   --output-dir artifacts/case14_seed42_test_embeddings \
-  --run-name case14_seed42_test_embeddings \
+  --run-name case14_seed42_coherent_final_retry \
   --graphkit-requirements-lock configs/graphkit-requirements.lock \
   --graphkit-source-record configs/graphkit-source.txt \
   --dataset-split test \
@@ -374,6 +374,5 @@ Named queries retrieve evidence already stored in the graph; they do not rerun i
 `high-residual-distance` requires two thresholds values. `--residual-threshold` for maximum PBE value of the target scenario 
 and a second one `--distance-threshold` for its nearest-reference embedding distance. If predictions are both physically inconsistent 
 and far from reference scenarios in embedding space?
-
 
 
