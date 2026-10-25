@@ -21,6 +21,7 @@ dependencies = [
 [project.optional-dependencies]
 test = ["pytest>=8"]
 shacl = ["pyshacl>=0.25"]
+visualization = ["matplotlib>=3.8"]
 
 [project.scripts]
 genco-evidence = "genco_evidence_graph.cli:main"

@@ -929,6 +929,131 @@ def _prepare_training_metadata(args: argparse.Namespace) -> int:
     return 0
 
 
+def _render_evidence(
+    args: argparse.Namespace,
+    sections: tuple[str, ...],
+) -> int:
+    try:
+        from .visualization.render import render_showcase
+    except ImportError as error:
+        if error.name == "matplotlib" or (
+            error.name is not None
+            and error.name.startswith("matplotlib.")
+        ):
+            raise ValueError(
+                "Evidence rendering requires the optional visualization "
+                "environment; install requirements-visualization-py312.lock"
+            ) from error
+        raise
+    from .visualization.model import EvidenceShowcaseSpec
+
+    project_root = Path(args.project_root).resolve()
+
+    def project_path(value: str) -> Path:
+        path = Path(value)
+        return path if path.is_absolute() else project_root / path
+
+    result = render_showcase(
+        EvidenceShowcaseSpec(
+            graph=project_path(args.graph),
+            shapes=project_path(args.shapes),
+            prediction_parquet=project_path(
+                args.prediction_parquet,
+            ),
+            generator_prediction_parquet=project_path(
+                args.generator_prediction_parquet,
+            ),
+            checkpoint=project_path(args.checkpoint),
+            tolerance_config=project_path(
+                args.tolerance_config,
+            ),
+            output_dir=project_path(args.output_dir),
+            project_root=project_root,
+        ),
+        sections=sections,
+    )
+    print(
+        f"Rendered {len(result.outputs)} evidence figure files "
+        f"under {project_path(args.output_dir)}"
+    )
+    if result.manifest is not None:
+        print(f"Figure manifest: {result.manifest}")
+    return 0
+
+
+def _render_evidence_summary(args: argparse.Namespace) -> int:
+    return _render_evidence(args, ("summary",))
+
+
+def _render_evidence_graph(args: argparse.Namespace) -> int:
+    return _render_evidence(args, ("graph",))
+
+
+def _render_evidence_charts(args: argparse.Namespace) -> int:
+    return _render_evidence(args, ("charts",))
+
+
+def _render_evidence_showcase(args: argparse.Namespace) -> int:
+    return _render_evidence(
+        args,
+        ("summary", "graph", "charts"),
+    )
+
+
+def _add_visualization_arguments(
+    parser: argparse.ArgumentParser,
+) -> None:
+    parser.add_argument(
+        "--project-root",
+        default=".",
+        help="Project root used to resolve all relative paths.",
+    )
+    parser.add_argument(
+        "--graph",
+        default="artifacts/case14_scenario_215429_evidence.ttl",
+        help="Validated Turtle evidence graph.",
+    )
+    parser.add_argument(
+        "--shapes",
+        default="ontology/shapes.ttl",
+        help="SHACL shapes applied before rendering.",
+    )
+    parser.add_argument(
+        "--prediction-parquet",
+        default=(
+            "artifacts/case14_seed42_test_embeddings/"
+            "case14_ieee_predictions.parquet"
+        ),
+        help="Hash-bound bus prediction table.",
+    )
+    parser.add_argument(
+        "--generator-prediction-parquet",
+        default=(
+            "artifacts/case14_seed42_test_embeddings/"
+            "case14_ieee_gen_predictions.parquet"
+        ),
+        help="Hash-bound generator prediction table.",
+    )
+    parser.add_argument(
+        "--checkpoint",
+        default=(
+            "genco-opfdata/case14_ieee/seed42/"
+            "best_model_state_dict.pt"
+        ),
+        help="Checkpoint verified against the evidence graph.",
+    )
+    parser.add_argument(
+        "--tolerance-config",
+        default="configs/baseline_equivalence_tolerances.yaml",
+        help="Hash-bound reproduction tolerance policy.",
+    )
+    parser.add_argument(
+        "--output-dir",
+        default="figure/scenario_215429",
+        help="Directory for generated PNG, SVG, and manifest files.",
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Local GENCO Evidence Graph CLI")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -1102,6 +1227,34 @@ def build_parser() -> argparse.ArgumentParser:
     validation.add_argument("--graph", required=True)
     validation.add_argument("--shapes", required=True)
     validation.set_defaults(handler=_validate)
+
+    summary = subparsers.add_parser(
+        "render-evidence-summary",
+        help="Render a human-readable evidence summary card",
+    )
+    _add_visualization_arguments(summary)
+    summary.set_defaults(handler=_render_evidence_summary)
+
+    graph = subparsers.add_parser(
+        "render-evidence-graph",
+        help="Render a curated evidence relationship graph",
+    )
+    _add_visualization_arguments(graph)
+    graph.set_defaults(handler=_render_evidence_graph)
+
+    charts = subparsers.add_parser(
+        "render-evidence-charts",
+        help="Render numeric evidence charts",
+    )
+    _add_visualization_arguments(charts)
+    charts.set_defaults(handler=_render_evidence_charts)
+
+    showcase = subparsers.add_parser(
+        "render-evidence-showcase",
+        help="Render the complete validated evidence showcase",
+    )
+    _add_visualization_arguments(showcase)
+    showcase.set_defaults(handler=_render_evidence_showcase)
     return parser
 
 

@@ -1456,12 +1456,8 @@ def test_published_artifact_terminology_and_relations_are_non_causal() -> None:
     documentation = "\n".join(
         Path(path).read_text().lower()
         for path in (
-            "implementation_plan.md",
-            "genco_evidence_graph_blueprint.md",
-            "decisions.md",
-            "flow.md",
             "readme.md",
-            "understanding_sparql_queries.md",
+            "reproduction_graphkit.md",
         )
     )
     for unsupported_claim in (

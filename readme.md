@@ -375,5 +375,47 @@ Named queries retrieve evidence already stored in the graph; they do not rerun i
 and a second one `--distance-threshold` for its nearest-reference embedding distance. If predictions are both physically inconsistent 
 and far from reference scenarios in embedding space?
 
+## Generate evidence showcase figures
 
+Figure generation is isolated from evidence construction. The core
+`requirements-py312.lock` remains the authoritative evidence environment and
+does not include Matplotlib. Create a separate visualization environment when
+you need to regenerate the PNG and SVG files:
 
+```bash
+python3.12 -m venv .venv-visualization
+source .venv-visualization/bin/activate
+python -m pip install -r requirements-visualization-py312.lock
+python -m pip install . --no-deps
+```
+
+After building and validating the canonical scenario-215429 evidence graph,
+render the full showcase from the repository root. The following syntax can
+also be used with another compatible single-prediction Turtle evidence graph:
+
+```bash
+genco-evidence render-evidence-showcase \
+  --graph artifacts/case14_scenario_215429_evidence.ttl \
+  --output-dir figure/scenario_215429
+```
+
+The command validates the RDF with SHACL, verifies the checkpoint and
+prediction-table SHA-256 values recorded in the graph, then writes summary,
+graph, and numeric evidence views to the selected `--output-dir`. For the
+canonical scenario, that directory is `figure/scenario_215429/`. The generated
+`figure_manifest.json` binds every figure to its verified source hashes. Figures
+are presentation artifacts, not new provenance claims.
+
+The scenario ID is read from the single Prediction in the supplied graph;
+there is no separate `--scenario-id` option. The graph must use the GENCO
+evidence schema and contain exactly one Prediction. The supplied prediction
+tables, checkpoint, and tolerance policy must match the artifact paths and
+SHA-256 values recorded in that graph.
+
+Individual views can be regenerated with:
+
+```bash
+genco-evidence render-evidence-summary
+genco-evidence render-evidence-graph
+genco-evidence render-evidence-charts
+```
