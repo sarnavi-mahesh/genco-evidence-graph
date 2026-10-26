@@ -65,6 +65,35 @@ def _spec(output_dir: Path, graph: Path = GRAPH) -> EvidenceShowcaseSpec:
     )
 
 
+def test_workflow_figure_is_high_resolution_and_claim_bounded(tmp_path):
+    pytest.importorskip("matplotlib")
+    import matplotlib.image as mpimg
+
+    from genco_evidence_graph.visualization.workflow import render_workflow
+
+    png, svg = render_workflow(tmp_path)
+
+    assert png.is_file()
+    assert svg.is_file()
+    image = mpimg.imread(png)
+    assert image.shape[1] >= 1_800
+    assert image.shape[0] >= 1_000
+    svg_text = svg.read_text()
+    for label in (
+        "From GENCO prediction to inspectable evidence",
+        "GENCO Evidence Graph",
+        "Evidence inspection",
+        "Grid planner",
+        "Potential future application",
+        "MCP tool + LLM grid co-planner",
+        "Evidence supports inspection. It does not certify operational safety.",
+    ):
+        assert label in svg_text
+    assert "stroke-dasharray" in svg_text
+    assert "GencoLens" not in svg_text
+    assert "\N{EM DASH}" not in svg_text
+
+
 def test_visualization_cli_commands_parse_without_render_import():
     parser = build_parser()
     for command in (
