@@ -298,9 +298,23 @@ You can list the test scenario ids through the CLI:
 genco-evidence list-scenarios \
   --split-artifact genco-opfdata/splits/test.pt
 ```
-Use the `--prediction-id` and provide a scenario id to build its evidence graph. The
-following commands builds the evidence graph for tests scenario 215429 and 
-validates it against the SHACL shapes
+Use `--prediction-id` to select a scenario from the canonical case-14,
+seed-42 artifacts. The profile fills the pinned input paths and revisions:
+
+```bash
+genco-evidence build-evidence \
+  --profile case14-seed42 \
+  --prediction-id 215429 \
+  --output artifacts/case14_scenario_215429_evidence.ttl
+```
+
+Every profile value can be overridden with the existing explicit option, such
+as `--prediction-parquet` or `--expected-graphkit-commit`. Without `--profile`,
+all evidence inputs must still be supplied explicitly.
+
+The equivalent fully explicit command is available when every input and
+expected identity should be visible at the call site:
+
 ```bash
 genco-evidence build-evidence \
   --dataset-id opfdata_case14_ieee \
@@ -327,9 +341,12 @@ genco-evidence build-evidence \
   --baseline-tolerance-config configs/baseline_equivalence_tolerances.yaml \
   --expected-dataset-revision 78c3af1e915284e8c7c31f84879878bcf06db6dd \
   --expected-graphkit-commit f104900245cba26d1380037eea562cf633a97484 \
+  --expected-mlflow-run-id 64fb4b955f5042e8b7a39e4dc333a527 \
+  --top-k 5 \
   --output artifacts/case14_scenario_215429_evidence.ttl
-  
 ```
+
+Validate the resulting graph against the SHACL shapes:
 
 ```bash
 genco-evidence validate \
@@ -349,6 +366,14 @@ Run the evidence graph queries through named queries. Get the nearest reference 
 ```bash
 genco-evidence query --graph artifacts/case14_scenario_215429_evidence.ttl --named reference-cases
 ```
+
+Add `--pretty` for labeled terminal output with compact GENCO resource names
+and abbreviated hash values. The default output remains exact TSV for scripts.
+
+```bash
+genco-evidence query --graph artifacts/case14_scenario_215429_evidence.ttl --named reference-cases --pretty
+```
+
 Get residuals and violations for the target prediction.
 ```bash
 genco-evidence query --graph artifacts/case14_scenario_215429_evidence.ttl --named residuals
@@ -383,7 +408,7 @@ does not include Matplotlib. Create a separate visualization environment when
 you need to regenerate the PNG and SVG files:
 
 ```bash
-python3.12 -m venv .venv-visualization
+python -m venv .venv-visualization
 source .venv-visualization/bin/activate
 python -m pip install -r requirements-visualization-py312.lock
 python -m pip install . --no-deps
@@ -396,6 +421,20 @@ also be used with another compatible single-prediction Turtle evidence graph:
 ```bash
 genco-evidence render-evidence-showcase \
   --graph artifacts/case14_scenario_215429_evidence.ttl \
+  --output-dir figure/scenario_215429
+```
+
+The equivalent fully explicit rendering command is:
+
+```bash
+genco-evidence render-evidence-showcase \
+  --project-root . \
+  --graph artifacts/case14_scenario_215429_evidence.ttl \
+  --shapes ontology/shapes.ttl \
+  --prediction-parquet artifacts/case14_seed42_test_embeddings/case14_ieee_predictions.parquet \
+  --generator-prediction-parquet artifacts/case14_seed42_test_embeddings/case14_ieee_gen_predictions.parquet \
+  --checkpoint genco-opfdata/case14_ieee/seed42/best_model_state_dict.pt \
+  --tolerance-config configs/baseline_equivalence_tolerances.yaml \
   --output-dir figure/scenario_215429
 ```
 

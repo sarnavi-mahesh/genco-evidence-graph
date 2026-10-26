@@ -4,6 +4,8 @@ import argparse
 import json
 from pathlib import Path
 import sys
+import textwrap
+from urllib.parse import unquote
 
 import numpy as np
 import pandas as pd
@@ -43,6 +45,122 @@ from .training_metadata import (
     load_training_metadata_manifest,
     prepare_normalized_training_metadata,
 )
+
+
+BUILD_EVIDENCE_PROFILES: dict[str, dict[str, str]] = {
+    "case14-seed42": {
+        "dataset_id": "opfdata_case14_ieee",
+        "checkpoint": (
+            "genco-opfdata/case14_ieee/seed42/best_model_state_dict.pt"
+        ),
+        "prediction_parquet": (
+            "artifacts/case14_seed42_test_embeddings/"
+            "case14_ieee_predictions.parquet"
+        ),
+        "generator_prediction_parquet": (
+            "artifacts/case14_seed42_test_embeddings/"
+            "case14_ieee_gen_predictions.parquet"
+        ),
+        "target_keyed_embeddings": (
+            "artifacts/case14_seed42_test_embeddings/"
+            "case14_ieee_keyed_embeddings.parquet"
+        ),
+        "reference_keyed_embeddings": (
+            "artifacts/case14_seed42_train_embeddings/"
+            "case14_ieee_keyed_embeddings.parquet"
+        ),
+        "reference_prediction_parquet": (
+            "artifacts/case14_seed42_train_embeddings/"
+            "case14_ieee_predictions.parquet"
+        ),
+        "reference_generator_prediction_parquet": (
+            "artifacts/case14_seed42_train_embeddings/"
+            "case14_ieee_gen_predictions.parquet"
+        ),
+        "reference_run_manifest": (
+            "artifacts/case14_seed42_train_embeddings/run_manifest.json"
+        ),
+        "reference_split_artifact": "genco-opfdata/splits/train.pt",
+        "reference_config_artifact": (
+            "configs/case14_seed42_test_embeddings.yaml"
+        ),
+        "training_run_metadata": (
+            "genco-opfdata/mlflow/train/case14_ieee/seed42/"
+            "1927fe80558a48539ee37be478706781"
+        ),
+        "original_upstream_training_metadata_root": (
+            "artifacts/original_upstream_training_metadata"
+        ),
+        "model_repository_path": "genco-opfdata",
+        "raw_dataset_path": "data/case14_ieee/raw",
+        "split_artifact": "genco-opfdata/splits/test.pt",
+        "normalizer_artifact": (
+            "genco-opfdata/case14_ieee/seed42/normalizer_stats.pt"
+        ),
+        "config_artifact": "configs/case14_seed42_test_embeddings.yaml",
+        "run_manifest": (
+            "artifacts/case14_seed42_test_embeddings/run_manifest.json"
+        ),
+        "reproduction_run_manifest": (
+            "artifacts/case14_seed42_test_no_embeddings/run_manifest.json"
+        ),
+        "baseline_tolerance_config": (
+            "configs/baseline_equivalence_tolerances.yaml"
+        ),
+        "expected_dataset_revision": (
+            "78c3af1e915284e8c7c31f84879878bcf06db6dd"
+        ),
+        "expected_graphkit_commit": (
+            "f104900245cba26d1380037eea562cf633a97484"
+        ),
+    },
+}
+
+BUILD_EVIDENCE_REQUIRED_INPUTS = (
+    "dataset_id",
+    "checkpoint",
+    "prediction_parquet",
+    "generator_prediction_parquet",
+    "target_keyed_embeddings",
+    "reference_keyed_embeddings",
+    "reference_prediction_parquet",
+    "reference_generator_prediction_parquet",
+    "reference_run_manifest",
+    "reference_split_artifact",
+    "reference_config_artifact",
+    "training_run_metadata",
+    "original_upstream_training_metadata_root",
+    "model_repository_path",
+    "raw_dataset_path",
+    "split_artifact",
+    "normalizer_artifact",
+    "config_artifact",
+    "run_manifest",
+    "reproduction_run_manifest",
+    "baseline_tolerance_config",
+)
+
+
+def _apply_build_evidence_profile(
+    args: argparse.Namespace,
+) -> argparse.Namespace:
+    profile = getattr(args, "profile", None)
+    if profile is not None:
+        for name, value in BUILD_EVIDENCE_PROFILES[profile].items():
+            if getattr(args, name) is None:
+                setattr(args, name, value)
+    missing = [
+        f"--{name.replace('_', '-')}"
+        for name in BUILD_EVIDENCE_REQUIRED_INPUTS
+        if getattr(args, name) is None
+    ]
+    if missing:
+        raise ValueError(
+            "Missing build-evidence inputs: "
+            f"{', '.join(missing)}. Provide them explicitly or use "
+            "--profile case14-seed42.",
+        )
+    return args
 
 
 def _load_verified_training_run(
@@ -383,6 +501,7 @@ def _comparison_maxima(
 
 
 def _build_evidence(args: argparse.Namespace) -> int:
+    args = _apply_build_evidence_profile(args)
     working_directory = Path.cwd().resolve()
 
     def portable_path(path: str | Path) -> str:
@@ -790,6 +909,51 @@ def _build_evidence(args: argparse.Namespace) -> int:
     return 0
 
 
+def _pretty_query_value(value: object | None) -> str:
+    if value is None:
+        return ""
+    text = str(value)
+    uri_prefix = "https://genco.example/id/"
+    if text.startswith(uri_prefix):
+        text = unquote(text.removeprefix(uri_prefix))
+        if len(text) > 56:
+            text = f"{text[:32]}...{text[-21:]}"
+        return text
+    if len(text) == 64 and all(
+        character in "0123456789abcdefABCDEF"
+        for character in text
+    ):
+        return f"{text[:12]}...{text[-8:]}"
+    return text
+
+
+def _print_pretty_query(
+    headers: tuple[str, ...],
+    rows: tuple[tuple[object | None, ...], ...],
+) -> None:
+    if not rows:
+        print("No results.")
+        return
+    labels = tuple(header.replace("_", " ") for header in headers)
+    label_width = max(len(label) for label in labels)
+    for row_index, row in enumerate(rows, start=1):
+        if row_index > 1:
+            print()
+        print(f"Result {row_index}")
+        for label, value in zip(labels, row, strict=True):
+            prefix = f"  {label:<{label_width}} : "
+            wrapped = textwrap.wrap(
+                _pretty_query_value(value),
+                width=max(20, 100 - len(prefix)),
+                break_long_words=False,
+                break_on_hyphens=False,
+            ) or [""]
+            print(prefix + wrapped[0])
+            continuation = " " * len(prefix)
+            for line in wrapped[1:]:
+                print(continuation + line)
+
+
 def _query(args: argparse.Namespace) -> int:
     from rdflib import Graph
     from .queries import NAMED_QUERIES, QUERY_HEADERS, high_residual_and_distance
@@ -811,12 +975,15 @@ def _query(args: argparse.Namespace) -> int:
     else:
         sparql = args.sparql
     results = graph.query(sparql)
+    headers = (
+        QUERY_HEADERS[args.named]
+        if args.named
+        else tuple(str(variable) for variable in results.vars)
+    )
+    if args.pretty:
+        _print_pretty_query(headers, tuple(tuple(row) for row in results))
+        return 0
     if not args.no_header:
-        headers = (
-            QUERY_HEADERS[args.named]
-            if args.named
-            else tuple(str(variable) for variable in results.vars)
-        )
         print("\t".join(headers))
     for row in results:
         print("\t".join("" if value is None else str(value) for value in row))
@@ -1058,41 +1225,48 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Local GENCO Evidence Graph CLI")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    evidence = subparsers.add_parser("build-evidence", help="Build one prediction evidence graph")
-    evidence.add_argument("--dataset-id", required=True)
-    evidence.add_argument("--checkpoint", required=True)
-    evidence.add_argument("--prediction-id", required=True)
-    evidence.add_argument("--prediction-parquet", required=True)
-    evidence.add_argument("--generator-prediction-parquet", required=True)
-    evidence.add_argument("--target-keyed-embeddings", required=True)
-    evidence.add_argument("--reference-keyed-embeddings", required=True)
-    evidence.add_argument("--reference-prediction-parquet", required=True)
-    evidence.add_argument(
-        "--reference-generator-prediction-parquet",
-        required=True,
+    evidence = subparsers.add_parser(
+        "build-evidence",
+        help="Build one prediction evidence graph",
     )
-    evidence.add_argument("--reference-run-manifest", required=True)
-    evidence.add_argument("--reference-split-artifact", required=True)
-    evidence.add_argument("--reference-config-artifact", required=True)
-    evidence.add_argument("--training-run-metadata", required=True)
+    evidence.add_argument(
+        "--profile",
+        choices=tuple(BUILD_EVIDENCE_PROFILES),
+        help=(
+            "Fill omitted inputs from a canonical evidence-build profile; "
+            "explicit arguments override profile values."
+        ),
+    )
+    evidence.add_argument("--dataset-id")
+    evidence.add_argument("--checkpoint")
+    evidence.add_argument("--prediction-id", required=True)
+    evidence.add_argument("--prediction-parquet")
+    evidence.add_argument("--generator-prediction-parquet")
+    evidence.add_argument("--target-keyed-embeddings")
+    evidence.add_argument("--reference-keyed-embeddings")
+    evidence.add_argument("--reference-prediction-parquet")
+    evidence.add_argument("--reference-generator-prediction-parquet")
+    evidence.add_argument("--reference-run-manifest")
+    evidence.add_argument("--reference-split-artifact")
+    evidence.add_argument("--reference-config-artifact")
+    evidence.add_argument("--training-run-metadata")
     evidence.add_argument(
         "--original-upstream-training-metadata-root",
         "--pristine-training-metadata-root",
         dest="original_upstream_training_metadata_root",
-        required=True,
         help=(
             "Root of the untouched original upstream training metadata from "
             "the pinned model-repository revision."
         ),
     )
-    evidence.add_argument("--model-repository-path", required=True)
-    evidence.add_argument("--raw-dataset-path", required=True)
-    evidence.add_argument("--split-artifact", required=True)
-    evidence.add_argument("--normalizer-artifact", required=True)
-    evidence.add_argument("--config-artifact", required=True)
-    evidence.add_argument("--run-manifest", required=True)
-    evidence.add_argument("--reproduction-run-manifest", required=True)
-    evidence.add_argument("--baseline-tolerance-config", required=True)
+    evidence.add_argument("--model-repository-path")
+    evidence.add_argument("--raw-dataset-path")
+    evidence.add_argument("--split-artifact")
+    evidence.add_argument("--normalizer-artifact")
+    evidence.add_argument("--config-artifact")
+    evidence.add_argument("--run-manifest")
+    evidence.add_argument("--reproduction-run-manifest")
+    evidence.add_argument("--baseline-tolerance-config")
     evidence.add_argument("--expected-dataset-revision")
     evidence.add_argument("--expected-graphkit-commit")
     evidence.add_argument("--expected-mlflow-run-id")
@@ -1213,10 +1387,16 @@ def build_parser() -> argparse.ArgumentParser:
     )
     query.add_argument("--residual-threshold", type=float)
     query.add_argument("--distance-threshold", type=float)
-    query.add_argument(
+    query_output = query.add_mutually_exclusive_group()
+    query_output.add_argument(
         "--no-header",
         action="store_true",
         help="Omit the descriptive TSV header row for scripting.",
+    )
+    query_output.add_argument(
+        "--pretty",
+        action="store_true",
+        help="Print readable labeled records with abbreviated URIs and hashes.",
     )
     query.set_defaults(handler=_query)
 

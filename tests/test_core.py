@@ -1,6 +1,7 @@
 import hashlib
 import base64
 import json
+from argparse import Namespace
 from pathlib import Path
 import numpy as np
 import pandas as pd
@@ -45,6 +46,8 @@ from genco_evidence_graph.baseline import (
     verify_run_manifest,
 )
 from genco_evidence_graph.cli import (
+    BUILD_EVIDENCE_REQUIRED_INPUTS,
+    _apply_build_evidence_profile,
     _comparison_maxima,
     _keyed_embedding_table,
     _load_verified_training_run,
@@ -656,6 +659,60 @@ def test_list_scenarios_cli_prints_validated_split_ids(tmp_path, capsys) -> None
         ],
     ) == 0
     assert capsys.readouterr().out.splitlines() == ["215429", "4873"]
+
+
+def test_build_evidence_profile_fills_omitted_inputs_and_allows_overrides() -> None:
+    args = build_parser().parse_args(
+        [
+            "build-evidence",
+            "--profile",
+            "case14-seed42",
+            "--prediction-id",
+            "101402",
+            "--prediction-parquet",
+            "custom/predictions.parquet",
+            "--output",
+            "artifacts/case14_scenario_101402_evidence.ttl",
+        ],
+    )
+
+    resolved = _apply_build_evidence_profile(args)
+
+    assert resolved.dataset_id == "opfdata_case14_ieee"
+    assert resolved.prediction_parquet == "custom/predictions.parquet"
+    assert resolved.generator_prediction_parquet.endswith(
+        "case14_ieee_gen_predictions.parquet",
+    )
+    assert (
+        resolved.expected_dataset_revision
+        == "78c3af1e915284e8c7c31f84879878bcf06db6dd"
+    )
+
+
+def test_build_evidence_without_profile_still_requires_explicit_inputs() -> None:
+    args = build_parser().parse_args(
+        [
+            "build-evidence",
+            "--prediction-id",
+            "101402",
+            "--output",
+            "artifacts/case14_scenario_101402_evidence.ttl",
+        ],
+    )
+
+    with pytest.raises(ValueError, match="--dataset-id.*--checkpoint"):
+        _apply_build_evidence_profile(args)
+
+
+def test_build_evidence_python_api_arguments_do_not_require_profile() -> None:
+    args = Namespace(
+        **{
+            name: f"value-for-{name}"
+            for name in BUILD_EVIDENCE_REQUIRED_INPUTS
+        },
+    )
+
+    assert _apply_build_evidence_profile(args) is args
 
 
 def test_reference_split_preparation_is_hash_preserving(tmp_path) -> None:
@@ -1614,6 +1671,31 @@ def test_named_query_prints_descriptive_headers(tmp_path, capsys) -> None:
     lines = capsys.readouterr().out.splitlines()
     assert lines[0] == "prediction\tnearest_embedding_distance"
     assert lines[1].endswith("\t1.5")
+
+
+def test_pretty_query_abbreviates_uris_and_hashes(tmp_path, capsys) -> None:
+    graph_path = tmp_path / "evidence.ttl"
+    _valid_shacl_graph().serialize(graph_path, format="turtle")
+
+    assert main(
+        [
+            "query",
+            "--graph",
+            str(graph_path),
+            "--named",
+            "checkpoint",
+            "--pretty",
+        ],
+    ) == 0
+
+    output = capsys.readouterr().out
+    assert output.startswith("Result 1\n")
+    assert "https://genco.example/id/" not in output
+    assert "prediction" in output
+    assert "prediction/scenario-0" in output
+    assert "checkpoint sha256" in output
+    assert "aaaaaaaaaaaa...aaaaaaaa" in output
+    assert "a" * 64 not in output
 
 
 def test_public_query_and_validation_apis_use_serialized_graph(tmp_path) -> None:
