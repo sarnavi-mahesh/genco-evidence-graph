@@ -1209,13 +1209,13 @@ PLOTTERS: tuple[
     tuple[str, Callable[[TrajectoryPlotData], Figure]],
     ...,
 ] = (
-    ("01_metric_intuition", plot_metric_intuition),
-    ("02_cohort_selection", plot_cohort_selection),
-    ("03_group_metric_comparison", plot_group_metric_comparison),
-    ("04_transition_profiles", plot_transition_profiles),
-    ("05_path_length_vs_efficiency", plot_path_efficiency),
-    ("06_bus_vs_generator_geometry", plot_entity_geometry),
-    ("07_movement_pbe_localization", plot_localization),
+    ("metric_intuition", plot_metric_intuition),
+    ("cohort_selection", plot_cohort_selection),
+    ("group_metric_comparison", plot_group_metric_comparison),
+    ("transition_profiles", plot_transition_profiles),
+    ("path_length_vs_efficiency", plot_path_efficiency),
+    ("bus_vs_generator_geometry", plot_entity_geometry),
+    ("movement_pbe_localization", plot_localization),
 )
 
 
